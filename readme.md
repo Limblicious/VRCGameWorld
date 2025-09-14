@@ -34,8 +34,8 @@ This repository hosts the living specs for a high‑performance, VR‑first **hu
 
 ## 📚 Documents (start here)
 
-- [`research.md`](./research.md) — Complete system map (AI, generator, presence, authority, data schemas).
-- [`plan.md`](./plan.md) — Implementation plan synced to research (file‑by‑file actions, tests, budgets).
+- [`research.md`](./Design%20Documents/research.md) — Complete system map (AI, generator, presence, authority, data schemas).
+- [`plan.md`](./Design%20Documents/plan.md) — Implementation plan synced to research (file‑by‑file actions, tests, budgets).
 
 > These two files are the single source of truth. Keep them in sync.
 
