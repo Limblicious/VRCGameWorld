@@ -41,10 +41,10 @@ VRDefaultWorldScene
 
 ### Key Modular Systems
 
-* **Hub**: Social space with elevator to dungeon. Will expand with class selection, shop, and progress display.
-* **Dungeon**: Runtime-generated level built from modular 10×10m blocks defined in `TileMeta`.
-* **Systems**: Centralized managers for runs, procedural generation, spawning, and zone activation.
-* **UI**: Handles immersion effects (blackout fades).
+- **Hub**: Social space with elevator to dungeon. Will expand with class selection, shop, and progress display.
+- **Dungeon**: Runtime-generated level built from modular 10×10m blocks defined in `TileMeta`.
+- **Systems**: Centralized managers for runs, procedural generation, spawning, and zone activation.
+- **UI**: Handles immersion effects (blackout fades).
 
 ---
 
@@ -90,11 +90,11 @@ VRDefaultWorldScene
 
 ## 🔗 Explicit System Relationships
 
-* `MasterRunController` orchestrates run state: **InHub → Generating → InDungeon → Cleanup → InHub**. It gates generators/spawners and owns the participant list for the active run.
-* `DungeonGenerator` builds a tile graph using `TileMeta` and hands spawn points to `DungeonSpawner`. `DungeonPresenceZone` lives on each tile root and signals player entry/exit to the RunController.
-* `DungeonSpawner` pulls from pools into active tiles only. Deactivates (returns to pool) when a tile goes inactive.
-* Player weapon swings (`MeleeWeapon` + `AttackAnimationHooks`) produce local hit overlaps → compact hit requests to `GameAuthority` → authoritative HP update → view proxies (e.g., `EnemyHealth`) reflect results.
-* All simulation timers (`Damageable`, i‑frames, AI decisions) tick via `CombatLoop`.
+- `MasterRunController` orchestrates run state: **InHub → Generating → InDungeon → Cleanup → InHub**. It gates generators/spawners and owns the participant list for the active run.
+- `DungeonGenerator` builds a tile graph using `TileMeta` and hands spawn points to `DungeonSpawner`. `DungeonPresenceZone` lives on each tile root and signals player entry/exit to the RunController.
+- `DungeonSpawner` pulls from pools into active tiles only. Deactivates (returns to pool) when a tile goes inactive.
+- Player weapon swings (`MeleeWeapon` + `AttackAnimationHooks`) produce local hit overlaps → compact hit requests to `GameAuthority` → authoritative HP update → view proxies (e.g., `EnemyHealth`) reflect results.
+- All simulation timers (`Damageable`, i‑frames, AI decisions) tick via `CombatLoop`.
 
 ---
 
@@ -106,26 +106,25 @@ VRDefaultWorldScene
 
 **Per‑Tick Sensing (cheap & deterministic):**
 
-* **Distance check:** squared magnitude vs thresholds (no sqrt). `CHASE_DIST2 = 25m^2`, `ATTACK_DIST2 = 4m^2` (tunable per `EnemySpec`).
-* **FOV check:** dot product vs precomputed cosine (no trig). Default FOV 160°.
-* **LOS check:** single `Physics.Raycast` on `Enemy→Target` up to `LOS_MAX=12m`, layers: `Environment` only. Run every 3rd tick to amortize.
+- **Distance check:** squared magnitude vs thresholds (no sqrt). `CHASE_DIST2 = 25m^2`, `ATTACK_DIST2 = 4m^2` (tunable per `EnemySpec`).
+- **FOV check:** dot product vs precomputed cosine (no trig). Default FOV 160°.
+- **LOS check:** single `Physics.Raycast` on `Enemy→Target` up to `LOS_MAX=12m`, layers: `Environment` only. Run every 3rd tick to amortize.
 
 **Transitions:**
 
-* `Idle → Patrol`: timer elapsed or player sensed outside attack range.
-* `Patrol → Chase`: (distance^2 ≤ CHASE\_DIST2) AND (FOV ok) AND (LOS hit == clear).
-* `Chase → Attack`: (distance^2 ≤ ATTACK\_DIST2) AND (LOS clear) AND (cooldown ≤ 0).
-* `Attack → Recover`: immediately after active window ends.
-* `Recover → Chase/Patrol`: cooldown elapsed AND target still sensed → `Chase`, else `Patrol`.
-* `* → Dead`: HP ≤ 0.
+- `Idle → Patrol`: timer elapsed or player sensed outside attack range.
+- `Patrol → Chase`: (distance^2 ≤ CHASE_DIST2) AND (FOV ok) AND (LOS hit == clear).
+- `Chase → Attack`: (distance^2 ≤ ATTACK_DIST2) AND (LOS clear) AND (cooldown ≤ 0).
+- `Attack → Recover`: immediately after active window ends.
+- `Recover → Chase/Patrol`: cooldown elapsed AND target still sensed → `Chase`, else `Patrol`.
+- `* → Dead`: HP ≤ 0.
 
-**Movement Model (NavMesh‑free):**
-VRChat cannot bake navmeshes at runtime, and our dungeon is assembled dynamically. Therefore:
+**Movement Model (NavMesh‑free):** VRChat cannot bake navmeshes at runtime, and our dungeon is assembled dynamically. Therefore:
 
-* **No Unity NavMesh at runtime.**
-* Use **tile waypoints graph**: each `TileMeta` provides local waypoint nodes and edge connectors at entrances. On generation, the graph is stitched (O(N) joins) into a dungeon‑wide sparse graph.
-* **Pathing:** lightweight A\* on the graph (nodes ≤ \~8 per tile) when target tile changes; otherwise **steer‑to‑next‑node** with simple obstacle avoidance (two forward raycasts + side offset).
-* **Chase fallback:** if LOS is clear, skip pathfinding and steer directly to player (fast path).
+- **No Unity NavMesh at runtime.**
+- Use **tile waypoints graph**: each `TileMeta` provides local waypoint nodes and edge connectors at entrances. On generation, the graph is stitched (O(N) joins) into a dungeon‑wide sparse graph.
+- **Pathing:** lightweight A* on the graph (nodes ≤ ~8 per tile) when target tile changes; otherwise **steer‑to‑next‑node** with simple obstacle avoidance (two forward raycasts + side offset).
+- **Chase fallback:** if LOS is clear, skip pathfinding and steer directly to player (fast path).
 
 ---
 
@@ -137,22 +136,22 @@ VRChat cannot bake navmeshes at runtime, and our dungeon is assembled dynamicall
 
 **Adjacency Rules:**
 
-* Only connect compatible entrances (edge‑to‑edge, facing inward normals).
-* Prevent back‑to‑back duplicates unless `TileMeta.allowRepeat=true`.
-* Ensure graph remains connected; maintain a `usedEntrances` bitmask per tile during build.
+- Only connect compatible entrances (edge‑to‑edge, facing inward normals).
+- Prevent back‑to‑back duplicates unless `TileMeta.allowRepeat=true`.
+- Ensure graph remains connected; maintain a `usedEntrances` bitmask per tile during build.
 
 **Randomization Constraints (v1, tunable):**
 
-* **Length:** 6–10 tiles total.
-* **Branching factor:** 1.6–2.0 avg (limited side rooms).
-* **Dead‑end ratio:** 15–25% of tiles.
-* **Loop chance:** 10% (optional small cycles).
-* **Boss/Reward room rule:** last depth tile must have ≥2 spawn points and higher loot weight.
+- **Length:** 6–10 tiles total.
+- **Branching factor:** 1.6–2.0 avg (limited side rooms).
+- **Dead‑end ratio:** 15–25% of tiles.
+- **Loop chance:** 10% (optional small cycles).
+- **Boss/Reward room rule:** last depth tile must have ≥2 spawn points and higher loot weight.
 
 **Future‑proofing for Verticality:**
 
-* Reserve `TileMeta.type ∈ {Room, Hall, Corner, Junction, Shaft}`; v1 uses all but `Shaft`.
-* Waypoint graph supports `y` offsets but v1 tiles all use `y=0`.
+- Reserve `TileMeta.type ∈ {Room, Hall, Corner, Junction, Shaft}`; v1 uses all but `Shaft`.
+- Waypoint graph supports `y` offsets but v1 tiles all use `y=0`.
 
 ---
 
@@ -162,16 +161,16 @@ VRChat cannot bake navmeshes at runtime, and our dungeon is assembled dynamicall
 
 **Mechanics:**
 
-* When the elevator is triggered, `MasterRunController` builds the dungeon and determines the **participant set** = all players currently inside the elevator volume during countdown (3–5s).
-* `DungeonPresenceZone` on each tile reports **which participants** are inside. The run is active while `participantsInDungeon > 0`.
-* **Late joiners** (not in participant set) remain in hub; cannot enter the active dungeon until the next run.
-* **Run end:** when all participants either return to hub via elevator or die/respawn in hub, `participantsInDungeon == 0` → cleanup → ready for next generation.
+- When the elevator is triggered, `MasterRunController` builds the dungeon and determines the **participant set** = all players currently inside the elevator volume during countdown (3–5s).
+- `DungeonPresenceZone` on each tile reports **which participants** are inside. The run is active while `participantsInDungeon > 0`.
+- **Late joiners** (not in participant set) remain in hub; cannot enter the active dungeon until the next run.
+- **Run end:** when all participants either return to hub via elevator or die/respawn in hub, `participantsInDungeon == 0` → cleanup → ready for next generation.
 
 **Activation Toggles per Zone:** enable/disable **AI ticks**, **enemy colliders**, **spawn routines**, **ambient audio/VFX**. Rendering left on (cheap) unless perf dictates otherwise.
 
 **Network Behavior:**
 
-* All signals go through `MasterRunController` on instance owner. Zones send local enter/exit → owner maintains participant counters.
+- All signals go through `MasterRunController` on instance owner. Zones send local enter/exit → owner maintains participant counters.
 
 ---
 
@@ -181,33 +180,33 @@ VRChat cannot bake navmeshes at runtime, and our dungeon is assembled dynamicall
 
 **Concurrency Rules:**
 
-* Hub is always open; **non‑participants** are ignored by dungeon logic until next run.
-* Only the **participant set** affects dungeon state and receives dungeon events.
+- Hub is always open; **non‑participants** are ignored by dungeon logic until next run.
+- Only the **participant set** affects dungeon state and receives dungeon events.
 
 **Failover:**
 
-* On `OnPlayerLeft`, if the leaving player was instance master, select next owner deterministically: lowest `playerId` among current participants, else among all players.
-* Call `Networking.SetOwner(newOwner, GameAuthority.gameObject)` and re‑RequestSerialization(). The authoritative arrays persist; late owner change is seamless.
+- On `OnPlayerLeft`, if the leaving player was instance master, select next owner deterministically: lowest `playerId` among current participants, else among all players.
+- Call `Networking.SetOwner(newOwner, GameAuthority.gameObject)` and re‑RequestSerialization(). The authoritative arrays persist; late owner change is seamless.
 
 **Event Throttling (performance‑first):**
 
-* **Hit requests:** max **8/s per player**; additional requests within 125 ms are dropped.
-* **Enemy HP sync:** batch **2 Hz** (500 ms) or on state changes (death). Serialize diffs only.
-* **Join/leave events:** debounced at 200 ms to avoid spam when players strafe on zone edges.
+- **Hit requests:** max **8/s per player**; additional requests within 125 ms are dropped.
+- **Enemy HP sync:** batch **2 Hz** (500 ms) or on state changes (death). Serialize diffs only.
+- **Join/leave events:** debounced at 200 ms to avoid spam when players strafe on zone edges.
 
 ---
 
 ## 🗄️ Data‑First Design (Performance‑oriented)
 
-* Use **ScriptableObjects** for immutable specs. Load once on scene start; keep references (no Resources.Load at runtime).
-* **Arrays over Lists** in hot paths; preallocate capacities.
-* **Quantize** floats to ints where viable (damage, HP) to reduce sync payloads.
+- Use **ScriptableObjects** for immutable specs. Load once on scene start; keep references (no Resources.Load at runtime).
+- **Arrays over Lists** in hot paths; preallocate capacities.
+- **Quantize** floats to ints where viable (damage, HP) to reduce sync payloads.
 
 **Schemas (summary):**
 
-* `WeaponSpec`: `id`, `baseDamage`, `staminaCost`, `ActiveWindow[]` (start, end, windowId).
-* `EnemySpec`: `id`, `maxHp`, `speed`, `CHASE_DIST2`, `ATTACK_DIST2`, `cooldowns`, `AttackPattern[]` (windup, active, cooldown, attackId).
-* `TileMeta`: `tileId`, `type`, `entrances[]`, `spawnPoints[]`, `themeId`, `allowRepeat`.
+- `WeaponSpec`: `id`, `baseDamage`, `staminaCost`, `ActiveWindow[]` (start, end, windowId).
+- `EnemySpec`: `id`, `maxHp`, `speed`, `CHASE_DIST2`, `ATTACK_DIST2`, `cooldowns`, `AttackPattern[]` (windup, active, cooldown, attackId).
+- `TileMeta`: `tileId`, `type`, `entrances[]`, `spawnPoints[]`, `themeId`, `allowRepeat`.
 
 ---
 

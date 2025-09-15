@@ -196,3 +196,5 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
 * After each step, record profiler + acceptance outcomes in `progress.md`.
 * Compact context; start next step with only the relevant spec excerpts.
 * If tests fail → fix the plan/research *first*, then re‑implement.
+
+- FOV check: **FOVcos ≈ 0.1736** (160° FOV) using dot product.
