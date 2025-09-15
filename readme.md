@@ -29,6 +29,7 @@ We follow a **spec‑first** workflow (Dex loop): research → plan → implemen
 - **Authority**: single **`GameAuthority`** owned by instance master manages `enemyHp[]`/`enemyAlive[]`. Players send compact hit requests.
 - **Throttling & Sync**: ≤ **8 hit requests/s/player** (125 ms window). Enemy HP diffs serialized at **2 Hz** and on death. Zone enter/exit debounced **200 ms**.
 - **Presence/Run Semantics**: only one dungeon run active. Participant set drives state while `participantsInDungeon > 0`. Late joiners stay hub‑side.
+- **Failover**: Instance master leaves → transfer to lowest playerId; RequestSerialization()
 
 **Performance Budgets (Quest‑like target):** Scripts ≤ **1.5 ms**, Physics ≤ **2.0 ms**, Draw calls **< 90** (mirror off).
 
@@ -54,7 +55,7 @@ We follow a **spec‑first** workflow (Dex loop): research → plan → implemen
 
 ## ✅ Milestones & Acceptance
 
-**Milestones** (from plan): windows → weapon/damageable → CombatLoop (60 Hz) → AI (10 Hz) → waypoint stitcher → GameAuthority + throttling/failover → pooled spawner → visualizers/tests.
+**Milestones** (from plan): windows → weapon/damageable → CombatLoop (60 Hz) → AI (10 Hz) → waypoint stitcher → GameAuthority + throttling/failover → pooled spawner → visualizers/tests → Scripts ≤1.5 ms; Physics ≤2.0 ms; Draw calls < 90; 0 GC/frame.
 
 **Acceptance (must pass):**
 - **Latency**: input→hit FX **< 80 ms**  

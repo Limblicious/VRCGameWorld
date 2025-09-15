@@ -22,7 +22,7 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
 
   * Weapon & enemy active‑window colliders
   * Hit registration → HP application → i‑frames / timers
-  * AI decisions (10 Hz), waypoint pathing, CombatLoop (60 Hz)
+  * AI decisions (10 Hz), waypoint pathing, CombatLoop (60 Hz), AI LOS every 3rd tick
   * Files: `MeleeWeapon`, `EnemyAttackHitBox`, `Damageable`, `PlayerDamageable`, `CombatLoop`, `EnemyAI`
 * **View** (pure cosmetic)
 
