@@ -63,7 +63,7 @@ VRDefaultWorldScene
 
 | Script                 | Role                 | Explicit Behavior                                                                                                                                                   |
 | ---------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EnemyAI.cs`           | State machine        | States: Idle → Patrol → Chase → Attack → Dead. Decision updates every 0.1s (10Hz). Movement delegated to Unity NavMesh. Attack windows tied to `EnemyAttackHitBox`. |
+| `EnemyAI.cs`           | State machine        | States: Idle → Patrol → Chase → Attack → Dead. Decision updates every 0.1s (10 Hz). NavMesh-free at runtime; stitched per-tile waypoint graph; A* only on tile change; steer-to-node otherwise. Attack windows tied to `EnemyAttackHitBox`. |
 | `EnemyAttackHitBox.cs` | Enemy melee          | Collider activated only during active attack window. Calls `ApplyHit` on `PlayerDamageable`. No random crits or hidden modifiers.                                   |
 | `PlayerHitBox.cs`      | Player hit detection | Collider for receiving hits. Only accepts hits from enemy colliders. Delegates to `PlayerDamageable`.                                                               |
 | `PlayerDamageable.cs`  | Player health        | Implements `IDamageable`. Tracks HP, applies hits, triggers death/respawn logic. Handles i-frames via CombatLoop.                                                   |
@@ -106,6 +106,7 @@ VRDefaultWorldScene
 
 **Per‑Tick Sensing (cheap & deterministic):**
 
+- **Cadence & thresholds:** 10 Hz decisions; `CHASE_DIST²=25`; `ATTACK_DIST²=4`; `FOVcos≈0.1736`; LOS every 3rd tick on `Environment`.
 - **Distance check:** squared magnitude vs thresholds (no sqrt). `CHASE_DIST2 = 25m^2`, `ATTACK_DIST2 = 4m^2` (tunable per `EnemySpec`).
 - **FOV check:** dot product vs precomputed cosine (no trig). Default FOV 160°.
 - **LOS check:** single `Physics.Raycast` on `Enemy→Target` up to `LOS_MAX=12m`, layers: `Environment` only. Run every 3rd tick to amortize.
@@ -161,9 +162,10 @@ VRDefaultWorldScene
 
 **Mechanics:**
 
-- When the elevator is triggered, `MasterRunController` builds the dungeon and determines the **participant set** = all players currently inside the elevator volume during countdown (3–5s).
+- When the elevator is triggered, `MasterRunController` builds the dungeon and determines the **participant set** = all players currently inside the elevator volume during countdown (3–5 s).
 - `DungeonPresenceZone` on each tile reports **which participants** are inside. The run is active while `participantsInDungeon > 0`.
 - **Late joiners** (not in participant set) remain in hub; cannot enter the active dungeon until the next run.
+- **Zone enter/exit** signals are debounced at **200 ms** to prevent churn on boundaries.
 - **Run end:** when all participants either return to hub via elevator or die/respawn in hub, `participantsInDungeon == 0` → cleanup → ready for next generation.
 
 **Activation Toggles per Zone:** enable/disable **AI ticks**, **enemy colliders**, **spawn routines**, **ambient audio/VFX**. Rendering left on (cheap) unless perf dictates otherwise.
@@ -185,8 +187,7 @@ VRDefaultWorldScene
 
 **Failover:**
 
-- On `OnPlayerLeft`, if the leaving player was instance master, select next owner deterministically: lowest `playerId` among current participants, else among all players.
-- Call `Networking.SetOwner(newOwner, GameAuthority.gameObject)` and re‑RequestSerialization(). The authoritative arrays persist; late owner change is seamless.
+- On owner leave, transfer to lowest `playerId`; call `Networking.SetOwner(newOwner, GameAuthority.gameObject)` and `RequestSerialization()` immediately.
 
 **Event Throttling (performance‑first):**
 
@@ -198,15 +199,14 @@ VRDefaultWorldScene
 
 ## 🗄️ Data‑First Design (Performance‑oriented)
 
-- Use **ScriptableObjects** for immutable specs. Load once on scene start; keep references (no Resources.Load at runtime).
-- **Arrays over Lists** in hot paths; preallocate capacities.
-- **Quantize** floats to ints where viable (damage, HP) to reduce sync payloads.
+- Arrays over Lists in hot paths; no `Resources.Load` at runtime; quantize ints where viable.
+- Use **ScriptableObjects** for immutable specs. Load once on scene start; keep references warm.
 
 **Schemas (summary):**
 
-- `WeaponSpec`: `id`, `baseDamage`, `staminaCost`, `ActiveWindow[]` (start, end, windowId).
-- `EnemySpec`: `id`, `maxHp`, `speed`, `CHASE_DIST2`, `ATTACK_DIST2`, `cooldowns`, `AttackPattern[]` (windup, active, cooldown, attackId).
-- `TileMeta`: `tileId`, `type`, `entrances[]`, `spawnPoints[]`, `themeId`, `allowRepeat`.
+- `WeaponSpec { id, baseDamage:int, staminaCost:int, ActiveWindow[]{ start, end, windowId } }`
+- `EnemySpec { id, maxHp:int, speed:float, CHASE_DIST2:float=25, ATTACK_DIST2:float=4, FOVcos:float≈0.1736, cooldown:float, AttackPattern[]{ windup, active, cooldown, attackId } }`
+- `TileMeta { tileId, type: Room|Hall|Corner|Junction|Shaft, entrances:Vector3Int[], spawnPoints:Vector3[], themeId, allowRepeat:bool, waypoints:Vector3[] }`
 
 ---
 

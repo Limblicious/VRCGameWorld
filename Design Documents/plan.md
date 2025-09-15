@@ -6,13 +6,12 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
 
 ## 0) Success Criteria (must‑meet)
 
-* **Local latency**: swing → first hit feedback **< 80 ms** (VR‑first).
-* **Determinism**: Active‑window hits only; **no random crits/hidden modifiers**.
-* **GC**: **0 allocations per frame** in combat scenes.
-* **CPU budgets (Quest‑like target)**: **Scripts ≤ 1.5 ms**, **Physics ≤ 2.0 ms**.
-* **Networking**: **≤ 1 KB/s per player avg** at **32 players**.
-* **Draw calls**: **< 90** in dungeon (mirror off by default).
-* **Hitboxes**: match weapon geometry **±3 cm**; require toggleable visualizer.
+* Latency (swing → first hit FX) **< 80 ms**
+* **0 GC allocations per frame** in combat scenes
+* CPU budgets (Quest-like): **Scripts ≤ 1.5 ms**, **Physics ≤ 2.0 ms**
+* Draw calls **< 90** in dungeon (mirror off)
+
+Plan enforces deterministic active-window hits, a hitbox visualizer for validation, and per-player bandwidth budget ≤1 KB/s sustained at 32 players.
 
 ---
 
@@ -34,7 +33,7 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
   * `DungeonPresenceZone` (participant tracking, zone enter/exit)
   * `DungeonSpawner` (pools only; no runtime Instantiate)
 
-**Networking authority**: single **instance‑owner `GameAuthority`** (enemy HP + alive flags). Players send **compact hit requests**. **Failover**: on owner leave, transfer to **lowest playerId**, re‑serialize.
+**Networking authority**: single **instance‑owner `GameAuthority`** (enemy HP + alive flags). Players send **compact hit requests**. **Failover**: on owner leave, transfer to lowest `playerId` via `Networking.SetOwner(newOwner, GameAuthority.gameObject)` and call `RequestSerialization()` immediately.
 
 ---
 
@@ -82,6 +81,7 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
 * **Tick cadence**: **10 Hz** decisions via `CombatLoop`.
 * **Sensing per tick** (cheap, deterministic):
 
+  * **Cadence & thresholds**: 10 Hz; `CHASE_DIST²=25`; `ATTACK_DIST²=4`; `FOVcos≈0.1736`; LOS every 3rd tick on `Environment`.
   * `dist2` vs thresholds: `CHASE_DIST2 = 25`, `ATTACK_DIST2 = 4` (m²; from `EnemySpec`).
   * **FOV**: dot ≥ `FOVCos` (e.g., 160° FOV → cos(80°) ≈ 0.1736; value stored in spec).
   * **LOS**: single raycast to player on `Environment` layer, every **3rd** AI tick.
@@ -109,6 +109,7 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
 * **Participant set** captured during elevator countdown (3–5 s).
 * Run remains active while `participantsInDungeon > 0`.
 * Late joiners stay in hub; queued for next run.
+* Zone enter/exit debounce **200 ms** shared across presence + networking events.
 * Zones toggle **AI ticks**, **enemy colliders**, **spawn routines**, **ambient SFX/VFX**.
 * All zone events route through instance owner.
 
@@ -152,10 +153,24 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
 
 * **Authority**: `GameAuthority` owned by instance master; arrays `enemyHp[]`, `enemyAlive[]` synchronized.
 * **Hit requests**: players send `_ReqEnemyHit(enemyId, damageInt, attackId, attackerId)`.
-* **Throttle**: **≤ 8 / second / player** (requests within 125 ms dropped).
-* **HP sync**: batch at **2 Hz** or on **death events**; send diffs only.
+* **Throttle**: **≤ 8 hit requests/s/player** (requests within 125 ms dropped).
+* **HP sync**: batch at **2 Hz** and on **death events**; send diffs only.
 * **Zone enter/exit**: debounced **200 ms**.
-* **Failover**: on owner leave, set owner to **lowest playerId**; `RequestSerialization()` immediately.
+* **Failover**: on owner leave, call `Networking.SetOwner(newOwner, GameAuthority.gameObject)` for the lowest `playerId`; `RequestSerialization()` immediately.
+
+### Tuning Guide
+
+| Parameter | Effect | Safe Range |
+| --------- | ------ | ---------- |
+| CombatLoop AI cadence | Reaction speed vs CPU | Fixed at **10 Hz** |
+| `CHASE_DIST²` | When enemies chase | **25** (tune ±5 if needed) |
+| `ATTACK_DIST²` | Attack initiation radius | **4** (tune ±1) |
+| `FOVcos` | Peripheral awareness | ≈ **0.1736** (150°–170°) |
+| LOS cadence | Raycast load vs responsiveness | Every **3rd** tick |
+| Hit throttle | Prevent spam | **≤ 8** requests/s/player (125 ms window) |
+| HP sync rate | Network load vs freshness | **2 Hz** + on death |
+| Zone debounce | Entry/exit churn filter | **200 ms** |
+| Elevator countdown | Participant capture window | **3–5 s** |
 
 ---
 
