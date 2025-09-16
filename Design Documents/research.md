@@ -93,6 +93,9 @@ VRDefaultWorldScene
 - PrinterController.cs — Constructor UI/anim; local print timers; sends to Locker.
 - LockerController.cs — Per-player visual slots; open/occupied states.
 - PedestalSlot.cs — Fixed 32 slots; synced occupancy; tablet presence.
+- LeaderboardClient.cs — Spec for Udon behavior that handles: /mint, /link, /clear, /leaderboard.txt, /me.txt calls via VRCStringDownloader. Master-only submit; passive pulls for display.
+- LeaderboardDisplay.cs — Spec: parses leaderboard.txt (“rank|name|clears” per line) and updates TextMeshPro in tablet/terminal. Pull every 30–60s or on demand.
+- Tablet UI (update) — Add opt-in toggle + status line; call LeaderboardClient methods.
 
 ---
 
@@ -199,6 +202,32 @@ TabletSpec (rename from any Backpack spec if present):
 - Per-enemy broadcast budget: ≤3 state events/sec.
 - No runtime Instantiate/Destroy in hot paths; all VFX/rigs pooled.
 - Target: up to 32 players, 5–10 active enemies.
+
+### PlayerData Keys (this world)
+- `clears:int` — Total layers cleared (local authoritative for UI).
+- `shareOptIn:bool` — Whether this player publishes to the site for this world.
+- `shareToken:string` — Random opaque token minted from /mint, stored for reuse.
+- `lastDisplayName:string` — Snapshot to detect rename; on change, call /link.
+
+### Networking Endpoints (external site, this world only)
+- `GET /mint` → returns a random token string.
+- `GET /link?token=…&name=<displayName>&world=cradle` → associates latest name to token for this world. Idempotent.
+- `GET /clear?token=…&layer=N&run=R&world=cradle` → +1 clear; server de-dupes by (token, run, layer, world).
+- `GET /leaderboard.txt?world=cradle&limit=50` → lines: `rank|name|clears`.
+- `GET /me.txt?token=…` → `clears=NN|title=<tier>` for tablet UI.
+
+### Net Hygiene & Budgets
+- Only instance master fires `/clear` and `/link`. All clients may pull `/leaderboard.txt` (shared display object preferred).
+- Pull cadence: 30–60s; avoid frequent polling.
+- All outbound is GET; no per-frame calls; no POST/sockets.
+
+### Titles (lore)
+- Thresholds (local + site): 0–4 Initiate, 5–19 Courier, 20–49 Warden, 50–99 Overwatch, 100+ Archon. Tablet renders title from local `clears`; site mirrors same logic.
+
+### Security / Abuse Notes
+- Site de-dupes by (token, run, layer, world); add basic rate limits per token/IP.
+- Token is opaque and stored only in PlayerData; no PII; display name is public label only.
+- If desired, add `/rotate` server endpoint later to replace a token (not required for MVP).
 
 ---
 
