@@ -299,6 +299,61 @@ Exact Implementation Changes (addendum):
 - Ammo correctness: Aether is decremented only on **charge completion**; never double-charged.
 - Perf under 8 players charging/firing: scripts ≤ **1.5 ms**, **0-GC**; state diffs **~2 Hz**; draw calls remain < 90.
 
+## 11) Opt-in Leaderboard (This World Only)
+
+**Goal:** Track per-player total **layer clears** for this world only, visible both in-world and on a minimal external site. Zero friction for players; opt-in governs any outbound beacons.
+
+**Constraints:**
+- Worlds can **only GET** URLs (no POST/sockets).
+- No access to stable VRChat user IDs in Udon.
+- Performance at 32 players; no spam; master-only outbound beacons.
+
+**Identity & Opt-in:**
+- Each player has **local persistence** via VRChat PlayerData:
+  - `clears:int` – total layers cleared (authoritative for local UI).
+  - `shareOptIn:bool` – whether to publish to site.
+  - `shareToken:string` – random opaque token for the site (minted once).
+  - `lastDisplayName:string` – last name we sent to site (for change detection).
+- **Opt-in toggle** on the tablet. First enable → GET `/mint` to obtain a token; store `shareToken` and set `shareOptIn=true`.
+- On join or name change, if `shareOptIn && shareToken` then GET `/link?token=…&name=<displayName>&world=cradle`.
+
+**Submitting clears (master-only):**
+- On layer clear: always update local `clears` in PlayerData.
+- If `shareOptIn && shareToken` and **Networking.IsMaster**:
+  - Compute `runId` when a run starts (short random string or start timestamp).
+  - GET `/clear?token=…&layer=N&run=R&world=cradle`.
+  - Server de-dupes by `(token, run, layer, world)`.
+
+**Displaying the board in-world:**
+- Tablet/terminal periodically GETs `/leaderboard.txt?world=cradle&limit=50` (every **30–60s**) and renders lines `rank|name|clears`.
+- For local player, GET `/me.txt?token=…` → `clears=NN|title=…` to show rank/title on tablet.
+
+**Privacy & UX:**
+- Default is **opt-out**; no outbound calls until player enables opt-in.
+- Site shows **current display name** associated with the token for this world only.
+- No PII, no usernames, no VRChat IDs.
+
+**Networking & Perf Budgets:**
+- Only **instance master** sends `/clear` and `/link`.
+- GETs are **event-based** (on clear, on join/name change) plus a passive **pull** every 30–60s for display.
+- Keep total broadcasts ≤ existing budgets; no per-frame net.
+
+**Success Criteria:**
+- Clearing a layer increments local `clears` instantly and appears on the site within one event.
+- Leaderboard text renders cleanly on tablet/terminal; no frame spikes; zero GC in hot paths.
+- Works at 32p with 5–10 active enemies.
+
+**Exact Implementation Changes (spec-only):**
+- Tablet UI: add “Publish to Leaderboard (this world)” toggle and a small status line.
+- **LeaderboardClient.cs (spec)**: helper to:
+  - `MintToken()` → GET `/mint` and store `shareToken`.
+  - `LinkDisplayName()` → GET `/link?token&name&world=cradle` if name changed.
+  - `SubmitClear(layer, runId)` → GET `/clear?token&layer&run&world=cradle` (master-only).
+  - `PullLeaderboard()` → GET `/leaderboard.txt?world=cradle&limit=50`.
+  - `PullMe()` → GET `/me.txt?token=…`.
+- Game flow: create `runId` on run start (elevator engage) and reuse for that run’s clears.
+- PlayerData keys: `clears:int`, `shareOptIn:bool`, `shareToken:string`, `lastDisplayName:string`.
+
 ## Loops
 
 Loop/Feature name: Multi-attacker effect arbitration on a single enemy
@@ -345,3 +400,21 @@ Ticks/timing: Instant.
 Data (SOs): —
 UI/ergonomics: Slot labels; “imprint stored” text.
 Success criteria: No conflicts; believable persistence.
+
+Loop/Feature name: Leaderboard opt-in (this world)
+Player flow (1–6 steps): 1) Player toggles “Publish” on tablet; 2) Mint token via /mint (store in PlayerData); 3) Link display name via /link (world=cradle); 4) Show confirmation on tablet; 5) On future joins, auto-link if name changed; 6) Player can toggle off anytime (stop outbound).
+Entities involved: Tablet UI, LeaderboardClient (spec), PlayerData.
+Authority & net: Client drives opt-in; outbound GETs are event-based; no per-frame net.
+Ticks/timing: Name check on join; no polling beyond leaderboard pulls.
+Data (SOs): none (config only); PlayerData keys as above.
+UI/ergonomics: Simple toggle + status (“Published as <name>” / “Not publishing”).
+Success criteria: No outbound calls unless opted-in; immediate feedback; stable across sessions.
+
+Loop/Feature name: Submit clear + display leaderboard (this world)
+Player flow (1–6 steps): 1) Player clears a layer; 2) Local PlayerData.clears++ (instant UI); 3) If opted-in and master → GET /clear?token&layer&run&world=cradle; 4) Tablet/terminal pulls /leaderboard.txt every 30–60s; 5) Render rank|name|clears; 6) /me.txt drives title badge.
+Entities involved: GameAuthority (runId), LeaderboardClient (spec), Tablet/Terminal display.
+Authority & net: Master-only submit; clients pull text for display.
+Ticks/timing: Pull cadence 30–60s; submit on event.
+Data (SOs): none; PlayerData keys as above.
+UI/ergonomics: Big legible list; player highlighted if present.
+Success criteria: No spam; board matches site; smooth at 32p.
