@@ -96,6 +96,10 @@ VRDefaultWorldScene
 - LeaderboardClient.cs — Spec for Udon behavior that handles: /mint, /link, /clear, /leaderboard.txt, /me.txt calls via VRCStringDownloader. Master-only submit; passive pulls for display.
 - LeaderboardDisplay.cs — Spec: parses leaderboard.txt (“rank|name|clears” per line) and updates TextMeshPro in tablet/terminal. Pull every 30–60s or on demand.
 - Tablet UI (update) — Add opt-in toggle + status line; call LeaderboardClient methods.
+- AmnionVatController.cs — Handles Register (first-time) and Imprint (bank write to PlayerData). Plays short synced FX; debounces repeats; guards against double-write.
+- ProtocolDaisController.cs — Aggregates this-run tallies into a Debrief summary (local), exposes values to tablet UI.
+- DepthRelayTerminal.cs — Presents tier options based on banked Clearance; sets authority-owned instance difficulty flag for the next descent.
+- ClearanceManager.cs — Centralizes awarding of Clearance on authoritative death/objective resolution; buffers “this-run” values until Imprint; exposes lifetime after bank.
 
 ---
 
@@ -189,6 +193,31 @@ EffectCaps (new SO):
 TabletSpec (rename from any Backpack spec if present):
 - holdRadiusM:float, chargeTickHz:int, moveCancelSpeed:float, overchargeAllowed:bool
 
+### Data Tables (config; ScriptableObjects or equivalent)
+- `EnemyType` registry (align names with existing roster): ScavDrone, Husk, Guardian, Turret, Wraith, Miniboss, …
+- `ClearanceTable`:
+  - `perKill:{ ScavDrone:2, Husk:3, Guardian:5, Turret:1, Wraith:4, Miniboss:20 }`
+  - `perObjective:{ DeadPort:2, Shortcut:2, ReservoirPuzzle:3 }`
+  - `perLayerClear:int = 15`
+  - Optional anti-farm: `perLayerSoftcap:int = 30`, `penaltyPercent:int = 50`
+- `DepthTierSpec`:
+  - `id:string` — SURVEY | BREACH | SIEGE | COLLAPSE
+  - `requiredRank:int` — 0 | 1 | 2 | 3
+  - `spawnBudgetMultiplier:float` — 1.0, 1.1, 1.2, 1.35
+  - `enemyHpMultiplier:float` — 1.0, 1.1, 1.2, 1.3
+  - `reservoirYieldBonus:int` — 0, +1, +2, +3
+  - `minibossGuarantee:bool` — false, true, true, true
+  - `blueprintExtraRollChance:float` — 0, 0.05, 0.10, 0.15
+
+### Tablet Debrief & Ledger (UI strings)
+- Debrief header: `Run Summary`
+- Columns: `This Run` | `Lifetime`
+- Rows: `Scav Drone, Husk, Guardian, Turret, Wraith, Miniboss, Total`
+- Clearance line: `Clearance +{value}`
+- Imprint confirm: `Actions archived to lattice.`
+- Depth Relay deny: `Access denied. Required: Clearance {rank}.`
+- Depth Relay confirm: `Pressure tier locked: {tier}.`
+
 ## ✨ Simulation & Networking Notes
 
 ### VFX Visibility Policy (Simulation ↔ View)
@@ -208,6 +237,22 @@ TabletSpec (rename from any Backpack spec if present):
 - `shareOptIn:bool` — Whether this player publishes to the site for this world.
 - `shareToken:string` — Random opaque token minted from /mint, stored for reuse.
 - `lastDisplayName:string` — Snapshot to detect rename; on change, call /link.
+- `clearanceBanked:int` — Lifetime banked Clearance.
+- `clearanceRun:int` — Accumulated this-run Clearance (reset on Imprint or new run).
+- `killsLifetime:map<EnemyType,int>` — Lifetime kills by type.
+- `killsRun:map<EnemyType,int>` — This-run kills by type (reset on new run).
+- `clearanceRank:int` — Computed from `clearanceBanked` (e.g., 0..3).
+- `lastImprintRunId:string` — Prevents double write for the same run summary.
+
+### Networking Alignment
+- Award Clearance within the **authoritative combat resolution** that already exists (same tick as death broadcast).
+- Imprint performs the only PlayerData write for Clearance/Ledger; guard with `lastImprintRunId`.
+- Depth tier is an authority flag consumed by spawn/encounter systems on the next descent.
+
+### Performance Notes
+- No per-frame network traffic added by these systems.
+- All hub device FX must be pooled; visual durations ≤2 s.
+- Debrief and Ledger are text-only tablet pages; avoid heavy UI prefabs.
 
 ### Networking Endpoints (external site, this world only)
 - `GET /mint` → returns a random token string.

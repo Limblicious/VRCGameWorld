@@ -354,6 +354,77 @@ Exact Implementation Changes (addendum):
 - Game flow: create `runId` on run start (elevator engage) and reuse for that run’s clears.
 - PlayerData keys: `clears:int`, `shareOptIn:bool`, `shareToken:string`, `lastDisplayName:string`.
 
+## 12) Clearance & Kill Ledger (Access-Only Progression; No Perks)
+
+**Intent:** Make enemies and objectives rewarding without touching the Lumen economy. Players earn **Clearance** (operator authorization) and maintain a **Kill Ledger** (by type + totals) during runs. These only **persist** when the player returns to the hub and performs an **Imprint**. Clearance gates **difficulty tiers** (instance pressure) via a hub terminal; it never grants stat buffs or discounts. Lumen remains the sole currency for ammo, healing devices, Printer crafting, and GA trade.
+
+### Hub Devices (Diegetic Save & Access)
+- **Amnion Vat** — ominous white-blue liquid clone vat. First use **registers DNA** from the tablet; subsequent uses **Imprint** run results into persistence. This is the only place Clearance and the Kill Ledger are banked.
+  - Register (first time): `"[AMNION ONLINE]  Genomic lattice captured. Shell print authorized."`
+  - Imprint (every return): `"Telemetry condensed. Clearance advanced. Your actions will be remembered."`
+  - Death fiction: respawn is a fresh shell from the Amnion; any unspent **Lumen** is lost as already specified in the economy.
+
+- **Protocol Dais** — short plinth beside the Amnion. Insert tablet to **tally** the current run into a **Debrief** before imprint:
+  - This Run: Kills by type, Layers Cleared, Objective Beats, **Clearance Gained**
+  - Post-Imprint: Lifetime Totals (by type), **Clearance Rank**
+
+- **Depth Relay** — difficulty selector for the **next descent**. Requires banked **Clearance Ranks**:
+  - **Tier 0: SURVEY** — default
+  - **Tier 1: BREACH** — requires Clearance **I**
+  - **Tier 2: SIEGE** — requires Clearance **II**
+  - **Tier 3: COLLAPSE** — requires Clearance **III**
+  - Party rule: if **any** present player meets the requirement, the instance may select that tier (escort license).
+
+### Earning Clearance (Run-Time Awards; Shared Credit)
+Award Clearance on the same authoritative tick that finalizes enemy death/goal completion to avoid new message types.
+- **Enemy defeats** (shared to all contributors who damaged within ~10 s and are within ~20 m; tunable):
+  - Scav Drone **+2**, Husk **+3**, Guardian **+5**, Turret **+1**, Wraith **+4**, Miniboss **+20**
+- **Objectives & exploration:**
+  - Capillary Tap siphon **+1**
+  - Reservoir Vat siphon **+3**
+  - Dead Port reactivation **+2**
+  - Shortcut opened **+2**
+  - Layer clear **+15**
+- **Optional anti-farm:** After ~30 defeats within the same layer, enemy-based Clearance awards in that layer are reduced by **50%** for that player; objective awards unaffected.
+
+### Banking & Ranks (No Perks)
+- Clearance and Kill Ledger **do not** persist mid-run. Bank only via **Amnion Imprint** (after viewing Debrief on the Protocol Dais).
+- If a player dies or leaves before imprint, they keep previously banked Clearance but **lose the unbanked** portion from that run.
+- **Rank thresholds** (tunable; access-only):
+  - Clearance **I** at **100**
+  - Clearance **II** at **250**
+  - Clearance **III** at **500**
+- Cosmetic titles may mirror ranks (Initiate → Courier → Warden → Overwatch → Archon); no gameplay effects.
+
+### Difficulty Tiers (Instance Pressure; Access-Gated)
+Set once at the Depth Relay; applied to the **next** descent.
+- **SURVEY (Tier 0):** baseline
+- **BREACH (Tier 1):** spawn budget **+10%**, enemy HP **+10%**, Reservoir yield **+1**
+- **SIEGE (Tier 2):** budget **+20%**, HP **+20%**, elites more frequent, Reservoir **+2**
+- **COLLAPSE (Tier 3):** budget **+35%**, HP **+30%**, miniboss guaranteed, Reservoir **+3**, blueprint extra roll **small chance**
+Tiers never alter player stats or Lumen costs; they only change world pressure and certain world yields within performance budgets.
+
+### Interop With Lumen (No Overlap)
+- Lumen is harvested from **set points** and spent on **ammo** (weapon ports), **healing devices** (Mediports/Crucible), **Printer** (craft/upgrades), and **GA Ledger** (Scrip). Enemies do **not** drop Lumen.
+- Clearance gates Depth tiers and fills the Kill Ledger; it never discounts or replaces Lumen systems.
+
+### Tablet & Terminal Copy (Diegetic Lines)
+- Protocol Dais (Debrief header): `"Run Summary"`
+- Depth Relay (deny): `"Access denied. Required: Clearance II."`
+- Depth Relay (accept): `"Pressure tier locked: SIEGE. Expect resistance."`
+
+### Networking & Performance (Consistent With Existing Spec)
+- **Local logic** for all hub devices; sync only short **FX/anim toggles** (no per-frame net).
+- **Depth selection** sets a single authority-owned **instance difficulty flag**; applied on next descent.
+- **Clearance awards** piggyback on existing authoritative combat resolution; no new high-frequency messages.
+- **No runtime instantiate**; Amnion/Relay/Dais use pooled VFX with ≤2 s visuals.
+
+### Success Criteria
+- Players can finish a run, read Debrief, **Imprint once**, and unlock higher tiers via banked Clearance.
+- Lumen economy remains intact and unchanged; 32-player hub stays performant and readable.
+
+
+
 ## Loops
 
 Loop/Feature name: Multi-attacker effect arbitration on a single enemy
@@ -418,3 +489,30 @@ Ticks/timing: Pull cadence 30–60s; submit on event.
 Data (SOs): none; PlayerData keys as above.
 UI/ergonomics: Big legible list; player highlighted if present.
 Success criteria: No spam; board matches site; smooth at 32p.
+
+Loop/Feature name: Debrief → Imprint (Bank Clearance & Ledger)
+Player flow (1–6 steps): 1) Return to hub after a run; 2) Protocol Dais tallies this-run kills, layer clears, and objectives and displays Clearance gained; 3) Insert tablet into Amnion Vat; 4) Imprint writes Clearance & Kill Ledger to persistence; 5) Tablet updates lifetime totals; Clearance rank may increase; 6) Proceed to Depth Relay or Printer.
+Entities involved: Protocol Dais, Amnion Vat, Tablet, PlayerData.
+Authority & net: Local logic; synced device FX; write occurs on imprint; no per-frame net.
+Ticks/timing: Debrief instant; Imprint interaction ≤2 s.
+Data (SOs): none (uses configured tables; see research.md).
+UI/ergonomics: “This Run / Lifetime” columns; clear one-line confirmation on success.
+Success criteria: Idempotent write (no double-imprint), accurate lifetime totals, zero GC spikes.
+
+Loop/Feature name: Depth Relay tier selection (Access via banked Clearance)
+Player flow (1–6 steps): 1) Approach Depth Relay in hub; tablet shows tier list; 2) Locked tiers show required Clearance rank; 3) If any present player meets the requirement, selection is permitted; 4) Confirm sets instance difficulty flag for the next descent; 5) Take the elevator to begin with the selected pressure; 6) Optionally change tier again after returning to hub.
+Entities involved: Depth Relay, Tablet, GameAuthority (instance flag).
+Authority & net: Authority toggles tier flag; synced accept/deny FX only.
+Ticks/timing: Instant flag set; no mid-run updates.
+Data (SOs): DepthTierSpec (see research.md).
+UI/ergonomics: Large buttons, legible copy; deny reason clear.
+Success criteria: Deterministic tier; no conflicts; respects perf budgets.
+
+Loop/Feature name: Kill Ledger (Tablet Page)
+Player flow (1–6 steps): 1) Open tablet → Ledger page; 2) View “This Run” and “Lifetime” kill counts by enemy type + total; 3) Optional cosmetic badges on thresholds (no gameplay effects); 4) After Imprint, lifetime increments; this-run resets at new run; 5) Players compare ledgers in hub for social proof; 6) Ledger does not alter gameplay; purely informational and motivating.
+Entities involved: Tablet UI, PlayerData.
+Authority & net: Local read/write at imprint; no ongoing net traffic.
+Ticks/timing: Instant UI updates post-imprint.
+Data (SOs): EnemyType registry for labels/icons; ClearanceTable references.
+UI/ergonomics: Single page table; top 5 enemy types + total; avoid scroll walls.
+Success criteria: Always correct after imprint; zero ambiguity about banking moments.
