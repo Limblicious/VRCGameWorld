@@ -26,6 +26,7 @@ We follow a **spec‑first** workflow (Dex loop): research → plan → implemen
 - **Combat Feel**: animation‑gated trigger hitboxes; **0 GC/frame**; input→hit feedback **< 80 ms**.
 - **AI Decisions**: AI 10 Hz; CHASE_DIST²=25; ATTACK_DIST²=4; FOVcos≈0.1736; LOS every 3rd tick on `Environment`.
 - **Movement Model**: **NavMesh‑free at runtime** (procedural dungeon). Enemies use a **stitched waypoint graph** per tile; light **A*** only when target tile changes; otherwise steer‑to‑node. If LOS is clear, steer directly.
+- **Ranged:** Aether-charged by **manual hold** from the backpack; weapons have **multi-shot magazines** (by quality). Hitscan, single shot, long cooldown.
 - **Authority**: single **`GameAuthority`** owned by instance master manages `enemyHp[]`/`enemyAlive[]`. Players send compact hit requests.
 - **Throttling & Sync**: ≤ **8 hit requests/s/player** (125 ms window). Enemy HP diffs serialized at **2 Hz** and on death. Zone enter/exit debounced **200 ms**.
 - **Presence/Run Semantics**: only one dungeon run active. Participant set drives state while `participantsInDungeon > 0`. Late joiners stay hub‑side.

@@ -127,6 +127,34 @@ VRDefaultWorldScene
 - **Pathing:** lightweight A* on the graph (nodes ≤ ~8 per tile) when target tile changes; otherwise **steer‑to‑next‑node** with simple obstacle avoidance (two forward raycasts + side offset).
 - **Chase fallback:** if LOS is clear, skip pathfinding and steer directly to player (fast path).
 
+
+## 🔫 Ranged Combat — Aether-Charged, Manual Hold, Multi-Shot
+
+**Intent:** Powerful, precision **single-shot** weapon that must be **manually charged** from the backpack. Weapons have a **magazine** (≥1) whose capacity may scale with **quality tier**. Charging is gated only by **time + proximity** (no enemy LOS gating).
+
+**Data (ScriptableObjects)**
+- `RangedWeaponSpec { weaponId, aetherPerCharge:int, chargeTimeSec:float, capacity:int, cooldownSec:float, spreadDeg:float, maxRangeM:float, qualityTier:int }`
+- `BackpackChargerSpec { holdRadiusM:float=0.25, tickHz:int=10, moveCancelSpeed:float=999f, damageCancels:bool=false }`
+- *(optional)* `WeaponQualitySpec { tier:int → capacity:int, cooldownScalar:float, aetherPerCharge:int }`
+
+**Weapon states**  
+`Empty → Charging → Armed(n) → Firing → Cooldown → Armed(n-1)`  
+- **Manual charge:** player **holds** the backpack’s charge port within `holdRadiusM` of the weapon’s port for `chargeTimeSec` to add **one shot** to the weapon’s magazine.  
+- **No LOS gating:** charging does not check for enemies; it only requires proximity + time.  
+- **Movement/damage cancel (designer-tunable):** default **off**; can be enabled via `moveCancelSpeed` / `damageCancels`.  
+- **Firing:** authority-validated **single-ray hitscan**; `cooldownSec` is long. Shots consume **from the weapon’s magazine** (no auto siphon mid-fight).
+
+**Ergonomics**  
+`VRC_Pickup.AutoHold = Yes`; Exact Grip set. **Use** toggles hand-lock. Charging requires **holding weapon and backpack together** (no holster charging).
+
+**Determinism**  
+Charge progress ticks at **tickHz** (default 10 Hz). Aether transfers **only on charge completion**. Dedupe key: `(playerId, weaponId, chargeIndex, tick)`. Weapon state diffs are serialized ascending by `weaponId`.
+
+## ⚡ Aether Economy (Ammo & Currency)
+
+`Aether` is the single integer resource used as **currency** and as the source for **ranged ammo**.  
+The **backpack** stores Aether; **weapons store shots**. Manual charging moves `Aether → shots` (one full charge = one shot). There is **no automatic mid-combat top-up**.
+
 ---
 
 ## 🧩 Dungeon Generator — Tile Adjacency & Randomization
@@ -194,6 +222,15 @@ VRDefaultWorldScene
 - **Hit requests:** max **8/s per player**; additional requests within 125 ms are dropped.
 - **Enemy HP sync:** batch **2 Hz** (500 ms) or on state changes (death). Serialize diffs only.
 - **Join/leave events:** debounced at 200 ms to avoid spam when players strafe on zone edges.
+- **Charge requests:** ≤ **10/s per player**; processed on 10 Hz charge tick; spend Aether on completion; diff sync **~2 Hz**.  
+- **Shot requests (ranged):** ≤ **20/s per player**; authority recomputes ray from seed + muzzle; HP diffs **~2 Hz** (+ immediate on death).  
+
+---
+
+### 🧩 Modularity & Overrides
+- **Bricks (reusable):** `RangedWeapon`, `BackpackCharger`, `MeleeWeapon`, `Damageable`, `EnemyAI`, `CombatLoop`.  
+- **Glue (world-specific):** `MasterRunController`, `DungeonGenerator`, `DungeonPresenceZone`, `DungeonSpawner`.  
+- Each brick reads tunables from its **own ScriptableObject**. Prefabs may **override** spec references per instance to create unique feel (capacity, cooldown, spread, charge time, Aether cost).
 
 ---
 
@@ -207,6 +244,10 @@ VRDefaultWorldScene
 - `WeaponSpec { id, baseDamage:int, staminaCost:int, ActiveWindow[]{ start, end, windowId } }`
 - `EnemySpec { id, maxHp:int, speed:float, CHASE_DIST2:float=25, ATTACK_DIST2:float=4, FOVcos:float≈0.1736, cooldown:float, AttackPattern[]{ windup, active, cooldown, attackId } }`
 - `TileMeta { tileId, type: Room|Hall|Corner|Junction|Shaft, entrances:Vector3Int[], spawnPoints:Vector3[], themeId, allowRepeat:bool, waypoints:Vector3[] }`
+- `RangedWeaponSpec { weaponId, aetherPerCharge:int, chargeTimeSec:float, capacity:int, cooldownSec:float, spreadDeg:float, maxRangeM:float, qualityTier:int }`
+- `BackpackChargerSpec { holdRadiusM:float, tickHz:int, moveCancelSpeed:float, damageCancels:bool }`
+- `WeaponQualitySpec { tier:int → capacity:int, cooldownScalar:float, aetherPerCharge:int }`
+- `EnergySpec { id:"Aether", maxBackpack:int, maxBank:int }`
 
 ---
 

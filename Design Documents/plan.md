@@ -213,3 +213,20 @@ Plan enforces deterministic active-window hits, a hitbox visualizer for validati
 * If tests fail → fix the plan/research *first*, then re‑implement.
 
 - FOV check: **FOVcos ≈ 0.1736** (160° FOV) using dot product.
+
+
+## Ranged Combat — Plan & Acceptance
+
+**Plan**
+- Add `RangedWeaponSpec` and `BackpackChargerSpec` assets; optional `WeaponQualitySpec`.
+- Implement **manual hold charging**: proximity ≤ `holdRadiusM=0.25 m`, tick at `10 Hz`, one shot added per `chargeTimeSec`.
+- Shots live in the weapon **magazine**; firing consumes from magazine; **no auto siphon** from backpack mid-fight.
+- Fire path: authority-validated **single-ray hitscan**; long `cooldownSec`; magazine capacity obeys `capacity` or `qualityTier` mapping.
+- Networking throttles: `charge ≤ 10/s/player`, `shot ≤ 20/s/player`; diffs ≈ **2 Hz**; dedupe keys as in research.
+
+**Acceptance**
+- Charge completes in `chargeTimeSec ± 0.1 s` when held within `0.25 m`; progress ticks at **10 Hz**.
+- Weapon capacity respects spec/quality (e.g., tiered: 1/2/3 shots).
+- Cannot fire during `cooldownSec`; cannot overfill magazine; cannot auto-charge.
+- Ammo correctness: Aether is decremented only on **charge completion**; never double-charged.
+- Perf under 8 players charging/firing: scripts ≤ **1.5 ms**, **0-GC**; state diffs **~2 Hz**; draw calls remain < 90.
