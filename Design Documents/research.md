@@ -86,6 +86,14 @@ VRDefaultWorldScene
 | `BlackoutHudFollower.cs`  | Canvas anchor    | Locks blackout canvas to player camera. Updates via cached transform refs only.              |
 | `AttackAnimationHooks.cs` | Animation events | Raises `BeginActiveWindow`, `EndActiveWindow`, `PlaySwingFX`. Attached to animation clips.   |
 
+### Script Inventory (additions)
+
+- EnemyEffectController.cs — Plays pooled VFX/SFX/material swaps for effects.
+- TabletController.cs — Player tablet state & proximity activation; insert/eject hooks.
+- PrinterController.cs — Constructor UI/anim; local print timers; sends to Locker.
+- LockerController.cs — Per-player visual slots; open/occupied states.
+- PedestalSlot.cs — Fixed 32 slots; synced occupancy; tablet presence.
+
 ---
 
 ## 🔗 Explicit System Relationships
@@ -128,6 +136,13 @@ VRDefaultWorldScene
 - **Chase fallback:** if LOS is clear, skip pathfinding and steer directly to player (fast path).
 
 
+### Enemy AI — State Machine (update)
+States: Idle → Patrol → Chase → Attack → Stagger → Knockdown → Recover → Dead
+- Stagger: anim flinch; timer; cancels Attack.
+- Knockdown: authority-driven; disables locomotion/attacks/hitboxes; timer.
+- Recover: authority computes pose (root/hips or nearest valid tile) and broadcasts RecoverFromKnockdown(pos,rot); clients snap & resume anim.
+
+
 ## 🔫 Ranged Combat — Aether-Charged, Manual Hold, Multi-Shot
 
 **Intent:** Powerful, precision **single-shot** weapon that must be **manually charged** from the backpack. Weapons have a **magazine** (≥1) whose capacity may scale with **quality tier**. Charging is gated only by **time + proximity** (no enemy LOS gating).
@@ -152,8 +167,38 @@ Charge progress ticks at **tickHz** (default 10 Hz). Aether transfers **only on 
 
 ## ⚡ Aether Economy (Ammo & Currency)
 
-`Aether` is the single integer resource used as **currency** and as the source for **ranged ammo**.  
+`Aether` is the single integer resource used as **currency** and as the source for **ranged ammo**.
 The **backpack** stores Aether; **weapons store shots**. Manual charging moves `Aether → shots` (one full charge = one shot). There is **no automatic mid-combat top-up**.
+
+## 🗃️ Data-First Design
+
+### Data-First Design (schemas — append)
+WeaponSpec:
+- Add: impulse:int, effectTags: EffectTagEntry[] { tag, power:int, durationTicks:int }, fxId_primary, fxId_overcharge
+
+EnemySpec:
+- Add: traits:Trait[], effectRules: Map<EffectTag, Affinity> (IMMUNE|RESIST|NORMAL|FRAGILE),
+  thresholds: { minImpulseForKnockdown?: int }, staggerDurTicks:int, knockdownDurTicks:int
+
+EffectCaps (new SO):
+- dotMaxStacks:int=3, slowMaxPermille:int=600, pushMax:int, ccImmunityTicks:int=45, knockdownDurTicks:int=105
+
+TabletSpec (rename from any Backpack spec if present):
+- holdRadiusM:float, chargeTickHz:int, moveCancelSpeed:float, overchargeAllowed:bool
+
+## ✨ Simulation & Networking Notes
+
+### VFX Visibility Policy (Simulation ↔ View)
+- Weapons: trails/pulses/impacts are synced triggers; no per-frame net.
+- Tablet: expand/compress; insert/eject; charge glow — synced bool/anim events.
+- Enemies: EffectStart/End drive pooled VFX (EMP flicker, Slow bubble, Tether line), hit flash (material swap).
+- Ragdolls: death = local only; non-lethal = local with single recover snap.
+
+### Networking Cadence & Budgets
+- Authority tick: 10 Hz; hit aggregation window: 80–100 ms.
+- Per-enemy broadcast budget: ≤3 state events/sec.
+- No runtime Instantiate/Destroy in hot paths; all VFX/rigs pooled.
+- Target: up to 32 players, 5–10 active enemies.
 
 ---
 

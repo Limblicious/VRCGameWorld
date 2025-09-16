@@ -214,6 +214,74 @@ Plan enforces deterministic active-window hits, a hitbox visualizer for validati
 
 - FOV check: **FOVcos ≈ 0.1736** (160° FOV) using dot product.
 
+---
+
+## 9) Combat Effects & Ragdolls (Deterministic, Net-Safe)
+
+Goals (extends §0 Success Criteria):
+- Weapon VFX visible to all (synced triggers), zero GC, ≤3 state events/sec/enemy.
+- Multi-attacker hits resolve deterministically per 10 Hz authority tick.
+- Death = local ragdoll only. Non-lethal knockdown = local ragdoll + single recover snap.
+
+Effect Tags (global, small set): Knockdown, Stagger, Push, SlowField, Tether, EMP, PhasePierce, Corrupt
+(Weapons emit tags; enemies gate/shape them.)
+
+Arbitration (authoritative @ 10 Hz):
+- Exclusive: Knockdown (pick 1) → priority ▸ magnitude ▸ earliest ts ▸ playerId.
+- Solo-owner: Tether (stronger replaces weaker; else ignore + Resist cue).
+- Max-of: SlowField, EMP (apply strongest; refresh duration).
+- Stacking (cap N=3): Corrupt (DOT/instability).
+- Additive (clamped): Push (sum this tick, clamp; ignored while Knockdown).
+- Soft CC: Stagger refreshes timer; never overlaps Knockdown.
+- Anti-stunlock: 0.75 s CC-immunity after Knockdown ends (downgrade Knockdown→Stagger).
+
+Ragdoll Policy:
+- Death: EnemyDie → all clients play local ragdoll immediately; timed despawn; no post-death sync.
+- Non-lethal Knockdown: StartKnockdown(dur) → local ragdoll; on end, authority sends one Recover(pos,rot) → snap & resume anim.
+- Rigs pre-wired in prefab, pooled only, ≤ ~14 RBs, duration 1.5–2.0 s.
+
+Networking (extends authority section):
+- Client → Authority: HitRequest(enemyId, damageInt, effectTags[], impulseInt, ts, playerId)
+- Authority → Clients (delta only, ≤3/sec/enemy):
+  - EnemyDamaged(enemyId,newHp), EffectStart/End(enemyId,tag,params),
+    ResistCue(enemyId,tag), StartKnockdown(enemyId,dur), RecoverFromKnockdown(enemyId,pos,rot), EnemyDie(enemyId), TetherOwner(enemyId,playerId,strength)
+
+Exact Implementation Changes (file-by-file addendum):
+- GameAuthority.cs: add 80–100 ms aggregation buffer; resolve effects per rules each 10 Hz tick; emit deltas only; ≤3 events/sec/enemy.
+- EnemyAI.cs: add states Stagger, Knockdown, Recover; timers in fixed CombatLoop; disable locomotion/attacks/hitboxes during Knockdown.
+- RagdollController.cs: add PlayKnockdown(float dur) and RecoverTo(TransformPose pose) alongside death flow.
+- EnemyEffectController.cs (new spec): map EffectStart/End/ResistCue/TetherOwner → pooled VFX/SFX/material swaps/icon flags.
+- MeleeWeapon.cs / EnemyAttackHitBox.cs: on overlap, build quantized HitInfo and push HitRequest(..effectTags[]); keep animation-gated windows & 32-id dedupe.
+- VFX assets: one pooled prefab per effect tag; weapon trails/impact sparks are synced triggers (anim/event IDs), not per-frame net.
+
+
+---
+
+## 10) Hub Interactables (Tablet / Printer / Locker / Pedestal)
+
+Tablet (Stick ↔ Tablet):
+- Client-local logic, synced visibility (expand/compress bool, insert/eject anim, glow states).
+- Acts as energy/currency store (session) and interaction key (proximity activation).
+
+Printer (Constructor):
+- Insert tablet → blueprint check (session vars) → timed print → output to Locker.
+- Sync door/arm anim + SFX only; logic stays local.
+
+Locker (Stasis Vault):
+- Per-player slots (UI affordance). Synced open/occupied cues; items spawned from pools.
+
+Pedestal (Diegetic “save”):
+- Fixed 32 slots. Insert tablet → lock slot (synced), set local flag.
+  On next join, spawn tablet in that slot for same user (or show “corrupted” if unavailable).
+
+Exact Implementation Changes (addendum):
+- TabletController.cs (spec): states Stick/Tablet, proximity activation, insert/eject hooks.
+- PrinterController.cs (spec): Constructor UI/anim; local print timers; sends to Locker.
+- LockerController.cs (spec): per-player visual slots; open/occupied states.
+- PedestalSlot.cs (spec): fixed 32 slots; synced occupancy; tablet presence.
+
+
+---
 
 ## Ranged Combat — Plan & Acceptance
 
@@ -230,3 +298,50 @@ Plan enforces deterministic active-window hits, a hitbox visualizer for validati
 - Cannot fire during `cooldownSec`; cannot overfill magazine; cannot auto-charge.
 - Ammo correctness: Aether is decremented only on **charge completion**; never double-charged.
 - Perf under 8 players charging/firing: scripts ≤ **1.5 ms**, **0-GC**; state diffs **~2 Hz**; draw calls remain < 90.
+
+## Loops
+
+Loop/Feature name: Multi-attacker effect arbitration on a single enemy
+Player flow (1–6 steps): 1) Several players hit same enemy; 2) Clients send HitRequest; 3) Authority resolves by class (Knockdown exclusive, Tether owner, max Slow/EMP, capped DoT, clamped Push, Stagger refresh); 4) Apply damage & update effects; 5) Broadcast one delta (+ Knockdown start/recover/resist); 6) Clients play/stop VFX; knockdown ends with single snap.
+Entities involved: Players, Weapons, Enemy, GameAuthority, pooled VFX.
+Authority & net: Authority 10 Hz; clients send compact hits; server sends delta only.
+Ticks/timing: 80–100 ms aggregation; Knockdown 1.5–2.0 s; CC-immunity 0.75 s; DoT tick 0.5 s.
+Data (SOs): WeaponSpec, EnemySpec, EffectCaps.
+UI/ergonomics: Resist spark+tone; effect icons; tether owner indicator.
+Success criteria: ≤3 events/sec/enemy; zero GC spikes; enemies never drift after non-lethal ragdoll (single recover snap); VFX readable with 32 players.
+
+Loop/Feature name: Non-lethal Knockdown ragdoll (sync-safe)
+Player flow (1–6 steps): 1) HitRequest with Knockdown potential; 2) Authority starts Knockdown; 3) Clients enable local ragdoll; 4) AI in Knockdown; 5) Authority computes recover pose; 6) Clients snap & resume.
+Entities involved: EnemyAI, RagdollController, GameAuthority, VFX pool.
+Authority & net: Start/Recover only; no per-frame physics sync.
+Ticks/timing: Knockdown 1.5–2.0 s; CC-immunity 0.75 s.
+Data (SOs): EnemySpec.thresholds, EffectCaps.
+UI/ergonomics: Clear fall VFX; recover cue; zero jitter on snap.
+Success criteria: Consistent cross-client timing; pooled rigs; no drift.
+
+Loop/Feature name: Tablet→Weapon charging (visible to all)
+Player flow (1–6 steps): 1) Hold stick-tablet to weapon port; 2) Insert anim + synced glow; 3) Local charge timer; 4) Remove tablet; cooldown; 5) Others see insert + glow; 6) Optional overcharge buff.
+Entities involved: Tablet, Weapon, VFX pool.
+Authority & net: Logic local; FX state toggles synced.
+Ticks/timing: Charge 2–5 s; cooldown 1 s.
+Data (SOs): WeaponSpec.chargeRate, fx ids; TabletSpec.
+UI/ergonomics: Big holo text; audible charge tone.
+Success criteria: Zero-GC; responsive; clearly visible to others.
+
+Loop/Feature name: Constructor printing (weapon craft/upgrade)
+Player flow (1–6 steps): 1) Insert tablet; 2) Check blueprint/energy; 3) Start print; 4) Output to Locker; 5) Tablet log updates; 6) Others see door/SFX.
+Entities involved: Tablet, Printer, Locker.
+Authority & net: Sync only anim/SFX; logic local.
+Ticks/timing: Print 3–6 s.
+Data (SOs): BlueprintSpec, WeaponSpec tiers.
+UI/ergonomics: Lock icons; success/fail text.
+Success criteria: No net spam; readable for bystanders.
+
+Loop/Feature name: Pedestal save (diegetic)
+Player flow (1–6 steps): 1) Insert tablet into slot; 2) Slot locks (synced); 3) Local flag set; 4) Next join spawns tablet in same slot; 5) Retrieve; 6) Slot clears.
+Entities involved: PedestalSlot(32), Tablet.
+Authority & net: Sync slot occupancy & tablet presence only.
+Ticks/timing: Instant.
+Data (SOs): —
+UI/ergonomics: Slot labels; “imprint stored” text.
+Success criteria: No conflicts; believable persistence.
