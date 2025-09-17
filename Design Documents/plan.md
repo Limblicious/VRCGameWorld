@@ -368,12 +368,7 @@ Exact Implementation Changes (addendum):
   - This Run: Kills by type, Layers Cleared, Objective Beats, **Clearance Gained**
   - Post-Imprint: Lifetime Totals (by type), **Clearance Rank**
 
-- **Depth Relay** — difficulty selector for the **next descent**. Requires banked **Clearance Ranks**:
-  - **Tier 0: SURVEY** — default
-  - **Tier 1: BREACH** — requires Clearance **I**
-  - **Tier 2: SIEGE** — requires Clearance **II**
-  - **Tier 3: COLLAPSE** — requires Clearance **III**
-  - Party rule: if **any** present player meets the requirement, the instance may select that tier (escort license).
+- **Depth Relay** — Consolidated into the Elevator’s Descent Core; see section “Elevator — Descent Core (Single Terminal, Tablet-Keyed)”.
 
 ### Earning Clearance (Run-Time Awards; Shared Credit)
 Award Clearance on the same authoritative tick that finalizes enemy death/goal completion to avoid new message types.
@@ -397,7 +392,7 @@ Award Clearance on the same authoritative tick that finalizes enemy death/goal c
 - Cosmetic titles may mirror ranks (Initiate → Courier → Warden → Overwatch → Archon); no gameplay effects.
 
 ### Difficulty Tiers (Instance Pressure; Access-Gated)
-Set once at the Depth Relay; applied to the **next** descent.
+Set once at the **Descent Core** (single terminal); applied to the **next** descent.
 - **SURVEY (Tier 0):** baseline
 - **BREACH (Tier 1):** spawn budget **+10%**, enemy HP **+10%**, Reservoir yield **+1**
 - **SIEGE (Tier 2):** budget **+20%**, HP **+20%**, elites more frequent, Reservoir **+2**
@@ -410,8 +405,7 @@ Tiers never alter player stats or Lumen costs; they only change world pressure a
 
 ### Tablet & Terminal Copy (Diegetic Lines)
 - Protocol Dais (Debrief header): `"Run Summary"`
-- Depth Relay (deny): `"Access denied. Required: Clearance II."`
-- Depth Relay (accept): `"Pressure tier locked: SIEGE. Expect resistance."`
+- Depth Relay: Consolidated into the Elevator’s Descent Core; see section “Elevator — Descent Core (Single Terminal, Tablet-Keyed)” for copy.
 
 ### Networking & Performance (Consistent With Existing Spec)
 - **Local logic** for all hub devices; sync only short **FX/anim toggles** (no per-frame net).
@@ -423,6 +417,80 @@ Tiers never alter player stats or Lumen costs; they only change world pressure a
 - Players can finish a run, read Debrief, **Imprint once**, and unlock higher tiers via banked Clearance.
 - Lumen economy remains intact and unchanged; 32-player hub stays performant and readable.
 
+
+
+## 13) Elevator — Descent Core (Single Terminal, Tablet-Keyed)
+
+**Intent:** Make the elevator the ritual that starts every descent. One **central terminal** in the elevator (the **Descent Core**) accepts exactly one tablet at a time (“Key Dock”). The docked tablet’s **owner** becomes the **Conductor** for that cycle. Tiers (SURVEY/BREACH/SIEGE/COLLAPSE) unlock based on the **owner’s banked Clearance rank**. Everyone can see the docked tablet and tier choice; only the **owner** can interact, preventing theft.
+
+### Device Identity & Presence
+- **Descent Core (Key Dock + Tier Panel):** Waist-height **Key Dock** in the center ring; a tall **Tier Panel** above the doors shows the current selection and locks.
+- **Tablet visibility:** The docked tablet is visible to all (full mesh, live Lumen vial, rank glyph). Non-owners cannot interact; the dock captures **ownerId** and blocks grabs/uses from others.
+- **Launch control:** A waist-high **Launch bar** (or a large “BEGIN DESCENT” tile) arms and starts the cycle.
+
+### State Machine
+`IDLE → DOCKED(owner) → TIER_SELECT(owner) → ARMED → LAUNCHING → IDLE`
+
+- **IDLE:** No tablet docked. Panel: “Dock key to select pressure.”
+- **DOCKED(owner):** Owner’s tablet locked; panel shows owner’s **Clearance rank** and eligible tiers.
+- **TIER_SELECT(owner):** Only owner can change tier; others see live updates.
+- **ARMED:** Tier confirmed; 2 s arming (amber). Owner may cancel within the arm window.
+- **LAUNCHING:** Doors close; authority broadcasts `Launch(tier, runId, runSeed)`; tablet **auto-ejects** to owner’s hand.
+
+### Player Flow
+1) Approach Core → tablet **auto-expands** at ~2 m.
+2) Insert tablet → **Key Dock** captures `ownerId` and locks.
+3) Panel reveals tiers **unlocked by the owner’s banked Clearance** (I/II/III).
+4) Owner selects tier (SURVEY/BREACH/SIEGE/COLLAPSE). Locked tiers show the **required rank**.
+5) Owner **confirms** (cooldown 5 s before another change).
+6) Owner pulls **Launch bar** (or presses BEGIN DESCENT). 2 s arm → doors seal → descent.
+7) Tablet **auto-ejects** as doors seal; owner resumes custody.
+
+### Social Handoff (No Visual Halo)
+- **Higher-rank swap:** If another player present has a higher banked rank and wants a deeper tier, they can press a **REQUEST CONTROL** plate near the railing.
+- **Owner prompt only:** This plays a soft chime and shows the owner (and only the owner) a tablet line:  
+  `“Higher Clearance requests control. Remove your key to hand over.”`
+- **Owner decides:** Only the **owner** can eject their tablet. No auto-eject, no force. (Optional player setting: **Auto-eject on request** = off by default.)
+- **AFK guard:** If the dock stays idle for **120 s**, the Core auto-ejects with: `“Dock idle. Key returned.”`
+
+### Rank Gating & Access
+- **Eligibility** is based solely on the **owner’s** banked Clearance rank (from the Amnion Imprint flow).  
+- If a tier is out of reach:  
+  `“Access denied. Required: Clearance II.”`  
+  The higher-rank player may **request control**, and the owner can hand over by ejecting.
+
+### Networking & Authority
+- **Authority vars per cycle:** `dockedOwnerId`, `tierSelection`, `armed`, `launching`, `runId`, `runSeed`, `lastRequestTs`.
+- **Events (rare):** `TierConfirm`, `Launch(tier, runId, runSeed)`, `RequestControl` (owner-local prompt only).
+- **No per-frame sync.** All visuals are local with **synced toggles**: panel text state, dock “occupied” light, door animation, brief arming cue.
+
+### Anti-Theft & Visibility (Shared Station Pattern)
+- **Owner-only interaction:** The dock records the inserting player’s id. Only that player (or station logic) can eject it.
+- **Global visibility:** Others see the tablet and its live status (Lumen vial, rank glyph), but their grab/use colliders are disabled by the dock while occupied.
+- **Timeout eject:** **120 s** idle auto-eject with owner notice; insert/eject debounced at **0.5 s**.
+
+### Timing & Cooldowns
+- **Tier-change cooldown (after confirm):** 5 s.
+- **Launch arming:** 2 s (cancel allowed by owner within this window).
+- **Idle auto-eject:** 120 s (configurable).
+
+### Interop With Existing Systems
+- **Clearance:** Reads **banked** rank; mid-run changes don’t apply until next Imprint.
+- **Lumen economy:** Elevator does **not** consume Lumen; players prepare ammo/healing/printing at their stations before docking.
+- **Launch bookkeeping:** On LAUNCHING, authority mints a new **runId** and **runSeed**; dungeon spawners consume `tier` + `runSeed`. (If a prior “Depth Relay” existed, this behavior is now **centralized** here.)
+
+### Tablet & Panel Copy (diegetic)
+- Idle: `Dock key to select pressure.`
+- On dock (owner): `[KEY DOCKED] Clearance: II — Eligible: SURVEY / BREACH / SIEGE`
+- Locked tier: `Access denied. Required: Clearance III.`
+- Tier confirm: `Pressure set: SIEGE. Prepare descent.`
+- Arming: `Door seal in 2…`
+- Request to owner: `Higher Clearance requests control. Remove your key to hand over.`
+- Auto-eject: `[KEY RETURNED] Maintain tablet custody.`
+
+### Success Criteria
+- One terminal controls tier and launch; zero tablet theft; selection is readable to all.
+- Exactly one `Launch` event per cycle; pooled FX only; no GC spikes; 32-player hub remains stable.
 
 
 ## Loops
@@ -491,7 +559,7 @@ UI/ergonomics: Big legible list; player highlighted if present.
 Success criteria: No spam; board matches site; smooth at 32p.
 
 Loop/Feature name: Debrief → Imprint (Bank Clearance & Ledger)
-Player flow (1–6 steps): 1) Return to hub after a run; 2) Protocol Dais tallies this-run kills, layer clears, and objectives and displays Clearance gained; 3) Insert tablet into Amnion Vat; 4) Imprint writes Clearance & Kill Ledger to persistence; 5) Tablet updates lifetime totals; Clearance rank may increase; 6) Proceed to Depth Relay or Printer.
+Player flow (1–6 steps): 1) Return to hub after a run; 2) Protocol Dais tallies this-run kills, layer clears, and objectives and displays Clearance gained; 3) Insert tablet into Amnion Vat; 4) Imprint writes Clearance & Kill Ledger to persistence; 5) Tablet updates lifetime totals; Clearance rank may increase; 6) Proceed to the Descent Core or Printer.
 Entities involved: Protocol Dais, Amnion Vat, Tablet, PlayerData.
 Authority & net: Local logic; synced device FX; write occurs on imprint; no per-frame net.
 Ticks/timing: Debrief instant; Imprint interaction ≤2 s.
@@ -500,13 +568,13 @@ UI/ergonomics: “This Run / Lifetime” columns; clear one-line confirmation on
 Success criteria: Idempotent write (no double-imprint), accurate lifetime totals, zero GC spikes.
 
 Loop/Feature name: Depth Relay tier selection (Access via banked Clearance)
-Player flow (1–6 steps): 1) Approach Depth Relay in hub; tablet shows tier list; 2) Locked tiers show required Clearance rank; 3) If any present player meets the requirement, selection is permitted; 4) Confirm sets instance difficulty flag for the next descent; 5) Take the elevator to begin with the selected pressure; 6) Optionally change tier again after returning to hub.
-Entities involved: Depth Relay, Tablet, GameAuthority (instance flag).
-Authority & net: Authority toggles tier flag; synced accept/deny FX only.
-Ticks/timing: Instant flag set; no mid-run updates.
+Player flow (1–6 steps): 1) Consolidated into the Elevator’s Descent Core (single terminal); 2) Owner docks tablet to surface eligible tiers; 3) Tier selection obeys the owner’s banked Clearance; 4) Confirm arm window (2 s) precedes Launch; 5) Launch(tier, runId, runSeed) fires once per cycle; 6) Tablet auto-ejects back to owner custody.
+Entities involved: Descent Core (Key Dock + Tier Panel), Tablet, GameAuthority.
+Authority & net: Tier flag chosen at Descent Core; Launch event carries tier.
+Ticks/timing: Aligns with Descent Core confirm cooldown (5 s) and 2 s arm.
 Data (SOs): DepthTierSpec (see research.md).
-UI/ergonomics: Large buttons, legible copy; deny reason clear.
-Success criteria: Deterministic tier; no conflicts; respects perf budgets.
+UI/ergonomics: Tier Panel messaging mirrors Descent Core copy.
+Success criteria: Deterministic tier; zero duplication of gating devices.
 
 Loop/Feature name: Kill Ledger (Tablet Page)
 Player flow (1–6 steps): 1) Open tablet → Ledger page; 2) View “This Run” and “Lifetime” kill counts by enemy type + total; 3) Optional cosmetic badges on thresholds (no gameplay effects); 4) After Imprint, lifetime increments; this-run resets at new run; 5) Players compare ledgers in hub for social proof; 6) Ledger does not alter gameplay; purely informational and motivating.
@@ -516,3 +584,21 @@ Ticks/timing: Instant UI updates post-imprint.
 Data (SOs): EnemyType registry for labels/icons; ClearanceTable references.
 UI/ergonomics: Single page table; top 5 enemy types + total; avoid scroll walls.
 Success criteria: Always correct after imprint; zero ambiguity about banking moments.
+
+Loop/Feature name: Single-terminal elevator (tablet-keyed)
+Player flow (1–6 steps): 1) Player docks tablet at the Descent Core; 2) Panel unlocks tiers based on the owner’s banked Clearance; 3) Owner selects and confirms a tier (cooldown 5 s); 4) Owner arms launch (2 s) via Launch bar / BEGIN DESCENT; 5) Doors seal; authority broadcasts Launch(tier, runId, runSeed); 6) Tablet auto-ejects to owner as descent begins.
+Entities involved: Descent Core (Key Dock + Tier Panel), Tablet, GameAuthority.
+Authority & net: Authority owns dockedOwnerId, tier flag, and launch; clients sync FX toggles only.
+Ticks/timing: Confirm cooldown 5 s; arm 2 s; idle auto-eject 120 s.
+Data (SOs): CoreTerminalSpec, DepthTierSpec.
+UI/ergonomics: Large tier tiles; clear locked reasons; owner-only controls.
+Success criteria: No theft; deterministic launch; no per-frame sync; zero GC spikes.
+
+Loop/Feature name: Request Control (polite handoff, no force)
+Player flow (1–6 steps): 1) A higher-rank player presses REQUEST CONTROL near the Core; 2) Owner receives a chime and on-tablet prompt requesting handoff; 3) Owner may eject the tablet to hand control; otherwise nothing changes; 4) If owner ejects, the requester docks and selects tier; 5) Launch proceeds normally under the new owner; 6) If dock idle for 120 s, auto-eject returns key to owner.
+Entities involved: Descent Core, Tablet(Owner), Tablet(Requester).
+Authority & net: Authority sets lastRequestTs; owner prompt is local; no forced eject.
+Ticks/timing: Request spam-guard 3 s; insert/eject debounce 0.5 s.
+Data (SOs): CoreTerminalSpec (allowRequestCue, spam thresholds).
+UI/ergonomics: Clear, polite copy; no grief vectors.
+Success criteria: Fast human handoff when desired; no coercion; no stuck states.
