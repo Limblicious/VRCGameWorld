@@ -6,13 +6,26 @@ This repository hosts the living specs for a high‑performance, VR‑first **hu
 
 We follow a **spec‑first** workflow (Dex loop): research → plan → implement → compact. Code only begins once specs are green.
 
+## Hub devices at a glance
+
+| Device           | Role (source of truth) |
+|------------------|------------------------|
+| Save Terminal    | First-time registration and initial persistence setup. |
+| Protocol Dais    | Post-run imprint/debrief station beside the Amnion. |
+| Amnion Vat       | Resuscitation if sufficient **Lumen** is banked. |
+| Printer          | Craft and upgrade gear. |
+| Locker           | Store crafted gear for later runs. |
+| Pedestal (x32)   | Diegetic tablet “parking” slots for persistence affordance. |
+| Descent Core     | Single-terminal elevator to dungeon. Hub has **no access doors**; only the elevator has a sealing shutter. |
+
+
 ---
 
 ## 🎮 Core Loop
 
 1. **Spawn in Hub** → socialize, mirror, check progress.  
-2. **Prepare** → choose class/abilities, buy upgrades with run currency.  
-3. **Group Elevator** → 3–5 s countdown captures the **participant set**.
+2. **Prepare** → bank Lumen, craft/upgrade gear at the Printer, and check your loadout.  
+3. **Group Elevator** → 3–5 s countdown captures the **participant set**. The hub room has no access doors; only the elevator mechanism uses a sealing shutter.
 4. **Dungeon Run** → modular rooms, enemies, loot, materials, XP.  
 5. **Return to Hub** → bank rewards, upgrade, repeat.
 
@@ -26,7 +39,7 @@ We follow a **spec‑first** workflow (Dex loop): research → plan → implemen
 - **Combat Feel**: animation‑gated trigger hitboxes; **0 GC/frame**; input→hit feedback **< 80 ms**.
 - **AI Decisions**: AI 10 Hz; CHASE_DIST²=25; ATTACK_DIST²=4; FOVcos≈0.1736; LOS every 3rd tick on `Environment`.
 - **Movement Model**: **NavMesh‑free at runtime** (procedural dungeon). Enemies use a **stitched waypoint graph** per tile; light **A*** only when target tile changes; otherwise steer‑to‑node. If LOS is clear, steer directly.
-- **Ranged:** Aether-charged by **manual hold** from the backpack; weapons have **multi-shot magazines** (by quality). Hitscan, single shot, long cooldown.
+- **Ranged:** Lumen-charged by **manual hold** from the tablet; weapons have **multi-shot magazines** (by quality). Hitscan, single shot, long cooldown.
 - **Authority**: single **`GameAuthority`** owned by instance master manages `enemyHp[]`/`enemyAlive[]`. Players send compact hit requests.
 - **Throttling & Sync**: ≤ **8 hit requests/s/player** (125 ms window). Enemy HP diffs serialized at **2 Hz** and on death. Zone enter/exit debounced **200 ms**.
 - **Presence/Run Semantics**: only one dungeon run active. Participant set drives state while `participantsInDungeon > 0`. Late joiners stay hub‑side.

@@ -4,6 +4,19 @@
 
 This document maps out the current system structure of the VRChat world `L2.005-GA`, as seen in the Unity scene hierarchy and codebase. It is refined to remove generalizations — every system is explicitly described with intended behavior and relationships.
 
+## Hub devices at a glance
+
+| Device           | Role (source of truth) |
+|------------------|------------------------|
+| Save Terminal    | First-time registration and initial persistence setup. |
+| Protocol Dais    | Post-run imprint/debrief station beside the Amnion. |
+| Amnion Vat       | Resuscitation if sufficient **Lumen** is banked. |
+| Printer          | Craft and upgrade gear. |
+| Locker           | Store crafted gear for later runs. |
+| Pedestal (x32)   | Diegetic tablet “parking” slots for persistence affordance. |
+| Descent Core     | Single-terminal elevator to dungeon. Hub has **no access doors**; only the elevator has a sealing shutter. |
+
+
 ---
 
 ## 🌍 Scene Hierarchy Overview
@@ -98,7 +111,7 @@ VRDefaultWorldScene
 - Tablet UI (update) — Add opt-in toggle + status line; call LeaderboardClient methods.
 - AmnionVatController.cs — Handles Register (first-time) and Imprint (bank write to PlayerData). Plays short synced FX; debounces repeats; guards against double-write.
 - ProtocolDaisController.cs — Aggregates this-run tallies into a Debrief summary (local), exposes values to tablet UI.
-- DescentCoreTerminalController.cs — Single-terminal elevator controller: manages Key Dock ownership, tier list, confirm cooldown, arm/launch, and auto-eject. Emits Launch(tier, runId, runSeed) once; absorbs prior “Depth Relay” selection if it existed.
+- DescentCoreTerminalController.cs — Single-terminal elevator controller: manages Key Dock ownership, tier list, confirm cooldown, arm/launch, and auto-eject. Emits Launch(tier, runId, runSeed) once; absorbs prior “Depth Relay” selection if it existed. The hub room has no access doors; only the elevator mechanism uses a sealing shutter.
 - TabletDockBay.cs — Generic station bay behavior used by the Core (and reusable by Printer/Crucible/GA terminals): captures ownerId on insert, disables non-owner colliders, handles 0.5 s debounce and 120 s idle auto-eject.
 - DepthRelayTerminal.cs — Difficulty selection consolidated into **Descent Core**; see DescentCoreTerminalController.cs.
 - ClearanceManager.cs — Centralizes awarding of Clearance on authoritative death/objective resolution; buffers “this-run” values until Imprint; exposes lifetime after bank.
@@ -152,32 +165,46 @@ States: Idle → Patrol → Chase → Attack → Stagger → Knockdown → Recov
 - Recover: authority computes pose (root/hips or nearest valid tile) and broadcasts RecoverFromKnockdown(pos,rot); clients snap & resume anim.
 
 
-## 🔫 Ranged Combat — Aether-Charged, Manual Hold, Multi-Shot
+## 🔫 Ranged Combat — Lumen-Charged, Manual Hold, Multi-Shot
 
-**Intent:** Powerful, precision **single-shot** weapon that must be **manually charged** from the backpack. Weapons have a **magazine** (≥1) whose capacity may scale with **quality tier**. Charging is gated only by **time + proximity** (no enemy LOS gating).
+**Intent:** Powerful, precision **single-shot** weapon that must be **manually charged** from the tablet. Weapons have a **magazine** (≥1) whose capacity may scale with **quality tier**. Charging is gated only by **time + proximity** (no enemy LOS gating).
 
 **Data (ScriptableObjects)**
-- `RangedWeaponSpec { weaponId, aetherPerCharge:int, chargeTimeSec:float, capacity:int, cooldownSec:float, spreadDeg:float, maxRangeM:float, qualityTier:int }`
-- `BackpackChargerSpec { holdRadiusM:float=0.25, tickHz:int=10, moveCancelSpeed:float=999f, damageCancels:bool=false }`
-- *(optional)* `WeaponQualitySpec { tier:int → capacity:int, cooldownScalar:float, aetherPerCharge:int }`
+- `RangedWeaponSpec { weaponId, lumenPerCharge:int, chargeTimeSec:float, capacity:int, cooldownSec:float, spreadDeg:float, maxRangeM:float, qualityTier:int }`
+- `TabletChargerSpec { holdRadiusM:float=0.25, tickHz:int=10, moveCancelSpeed:float=999f, damageCancels:bool=false }`
+- *(optional)* `WeaponQualitySpec { tier:int → capacity:int, cooldownScalar:float, lumenPerCharge:int }`
 
 **Weapon states**  
 `Empty → Charging → Armed(n) → Firing → Cooldown → Armed(n-1)`  
-- **Manual charge:** player **holds** the backpack’s charge port within `holdRadiusM` of the weapon’s port for `chargeTimeSec` to add **one shot** to the weapon’s magazine.  
+- **Manual charge:** player **holds** the tablet’s charge port within `holdRadiusM` of the weapon’s port for `chargeTimeSec` to add **one shot** to the weapon’s magazine.  
 - **No LOS gating:** charging does not check for enemies; it only requires proximity + time.  
 - **Movement/damage cancel (designer-tunable):** default **off**; can be enabled via `moveCancelSpeed` / `damageCancels`.  
 - **Firing:** authority-validated **single-ray hitscan**; `cooldownSec` is long. Shots consume **from the weapon’s magazine** (no auto siphon mid-fight).
 
 **Ergonomics**  
-`VRC_Pickup.AutoHold = Yes`; Exact Grip set. **Use** toggles hand-lock. Charging requires **holding weapon and backpack together** (no holster charging).
+`VRC_Pickup.AutoHold = Yes`; Exact Grip set. **Use** toggles hand-lock. Charging requires **holding weapon and tablet together** (no holster charging).
 
 **Determinism**  
-Charge progress ticks at **tickHz** (default 10 Hz). Aether transfers **only on charge completion**. Dedupe key: `(playerId, weaponId, chargeIndex, tick)`. Weapon state diffs are serialized ascending by `weaponId`.
+Charge progress ticks at **tickHz** (default 10 Hz). Lumen transfers **only on charge completion**. Dedupe key: `(playerId, weaponId, chargeIndex, tick)`. Weapon state diffs are serialized ascending by `weaponId`.
 
-## ⚡ Aether Economy (Ammo & Currency)
+## ⚡ Lumen Economy (Ammo & Currency)
 
-`Aether` is the single integer resource used as **currency** and as the source for **ranged ammo**.
-The **backpack** stores Aether; **weapons store shots**. Manual charging moves `Aether → shots` (one full charge = one shot). There is **no automatic mid-combat top-up**.
+See [EconomySpec](./research.md#economyspec) for synchronized numeric tuning across documents.
+
+## EconomySpec <!-- SOURCE OF TRUTH: Do not duplicate numeric values elsewhere -->
+
+| Key                               | Value | Notes |
+|-----------------------------------|-------|-------|
+| Amnion: Resuscitation SURVEY Cost | 6 **Lumen** | Cost in **Lumen** deducted on recovery. |
+| Amnion: Resuscitation BREACH Cost | 8 **Lumen** |  |
+| Amnion: Resuscitation SIEGE Cost  | 10 **Lumen** |  |
+| Amnion: Resuscitation COLLAPSE Cost | 12 **Lumen** |  |
+| Amnion: Recommended Reserve Buffer | ≈2× tier cost | Tablet and Descent Core displays prompt this buffer. |
+| Tablet→Weapon charge time         | See WeaponQualitySpec | Time to transfer charge; not usable mid-combat. |
+| Weapon charge capacity by quality | See WeaponQualitySpec | Refer to WeaponQualitySpec. |
+
+`Lumen` is the single integer resource used as **currency** and as the source for **ranged ammo**.
+The **tablet** stores Lumen; **weapons store shots**. Manual charging moves `Lumen → shots` (one full charge = one shot). There is **no automatic mid-combat top-up**.
 
 ## 🗃️ Data-First Design
 
@@ -192,7 +219,7 @@ EnemySpec:
 EffectCaps (new SO):
 - dotMaxStacks:int=3, slowMaxPermille:int=600, pushMax:int, ccImmunityTicks:int=45, knockdownDurTicks:int=105
 
-TabletSpec (rename from any Backpack spec if present):
+TabletSpec (rename from any legacy key-carrier spec if present):
 - holdRadiusM:float, chargeTickHz:int, moveCancelSpeed:float, overchargeAllowed:bool
 
 ### Data Tables (config; ScriptableObjects or equivalent)
@@ -383,15 +410,15 @@ TabletSpec (rename from any Backpack spec if present):
 - **Hit requests:** max **8/s per player**; additional requests within 125 ms are dropped.
 - **Enemy HP sync:** batch **2 Hz** (500 ms) or on state changes (death). Serialize diffs only.
 - **Join/leave events:** debounced at 200 ms to avoid spam when players strafe on zone edges.
-- **Charge requests:** ≤ **10/s per player**; processed on 10 Hz charge tick; spend Aether on completion; diff sync **~2 Hz**.  
+- **Charge requests:** ≤ **10/s per player**; processed on 10 Hz charge tick; spend Lumen on completion; diff sync **~2 Hz**.  
 - **Shot requests (ranged):** ≤ **20/s per player**; authority recomputes ray from seed + muzzle; HP diffs **~2 Hz** (+ immediate on death).  
 
 ---
 
 ### 🧩 Modularity & Overrides
-- **Bricks (reusable):** `RangedWeapon`, `BackpackCharger`, `MeleeWeapon`, `Damageable`, `EnemyAI`, `CombatLoop`.  
+- **Bricks (reusable):** `RangedWeapon`, `TabletCharger`, `MeleeWeapon`, `Damageable`, `EnemyAI`, `CombatLoop`.  
 - **Glue (world-specific):** `MasterRunController`, `DungeonGenerator`, `DungeonPresenceZone`, `DungeonSpawner`.  
-- Each brick reads tunables from its **own ScriptableObject**. Prefabs may **override** spec references per instance to create unique feel (capacity, cooldown, spread, charge time, Aether cost).
+- Each brick reads tunables from its **own ScriptableObject**. Prefabs may **override** spec references per instance to create unique feel (capacity, cooldown, spread, charge time, Lumen cost).
 
 ---
 
@@ -405,10 +432,10 @@ TabletSpec (rename from any Backpack spec if present):
 - `WeaponSpec { id, baseDamage:int, staminaCost:int, ActiveWindow[]{ start, end, windowId } }`
 - `EnemySpec { id, maxHp:int, speed:float, CHASE_DIST2:float=25, ATTACK_DIST2:float=4, FOVcos:float≈0.1736, cooldown:float, AttackPattern[]{ windup, active, cooldown, attackId } }`
 - `TileMeta { tileId, type: Room|Hall|Corner|Junction|Shaft, entrances:Vector3Int[], spawnPoints:Vector3[], themeId, allowRepeat:bool, waypoints:Vector3[] }`
-- `RangedWeaponSpec { weaponId, aetherPerCharge:int, chargeTimeSec:float, capacity:int, cooldownSec:float, spreadDeg:float, maxRangeM:float, qualityTier:int }`
-- `BackpackChargerSpec { holdRadiusM:float, tickHz:int, moveCancelSpeed:float, damageCancels:bool }`
-- `WeaponQualitySpec { tier:int → capacity:int, cooldownScalar:float, aetherPerCharge:int }`
-- `EnergySpec { id:"Aether", maxBackpack:int, maxBank:int }`
+- `RangedWeaponSpec { weaponId, lumenPerCharge:int, chargeTimeSec:float, capacity:int, cooldownSec:float, spreadDeg:float, maxRangeM:float, qualityTier:int }`
+- `TabletChargerSpec { holdRadiusM:float, tickHz:int, moveCancelSpeed:float, damageCancels:bool }`
+- `WeaponQualitySpec { tier:int → capacity:int, cooldownScalar:float, lumenPerCharge:int }`
+- `EnergySpec { id:"Lumen", maxTablet:int, maxBank:int }`
 
 ---
 
