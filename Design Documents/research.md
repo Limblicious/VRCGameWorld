@@ -98,7 +98,9 @@ VRDefaultWorldScene
 - Tablet UI (update) — Add opt-in toggle + status line; call LeaderboardClient methods.
 - AmnionVatController.cs — Handles Register (first-time) and Imprint (bank write to PlayerData). Plays short synced FX; debounces repeats; guards against double-write.
 - ProtocolDaisController.cs — Aggregates this-run tallies into a Debrief summary (local), exposes values to tablet UI.
-- DepthRelayTerminal.cs — Presents tier options based on banked Clearance; sets authority-owned instance difficulty flag for the next descent.
+- DescentCoreTerminalController.cs — Single-terminal elevator controller: manages Key Dock ownership, tier list, confirm cooldown, arm/launch, and auto-eject. Emits Launch(tier, runId, runSeed) once; absorbs prior “Depth Relay” selection if it existed.
+- TabletDockBay.cs — Generic station bay behavior used by the Core (and reusable by Printer/Crucible/GA terminals): captures ownerId on insert, disables non-owner colliders, handles 0.5 s debounce and 120 s idle auto-eject.
+- DepthRelayTerminal.cs — Difficulty selection consolidated into **Descent Core**; see DescentCoreTerminalController.cs.
 - ClearanceManager.cs — Centralizes awarding of Clearance on authoritative death/objective resolution; buffers “this-run” values until Imprint; exposes lifetime after bank.
 
 ---
@@ -209,14 +211,54 @@ TabletSpec (rename from any Backpack spec if present):
   - `minibossGuarantee:bool` — false, true, true, true
   - `blueprintExtraRollChance:float` — 0, 0.05, 0.10, 0.15
 
+### Authority & Net (per Descent cycle)
+- Authority state: `dockedOwnerId:int`, `tierSelection:int`, `armed:bool`, `launching:bool`, `runId:string`, `runSeed:int`, `lastRequestTs:float`.
+- Events: `TierConfirm(tier)`, `Launch(tier, runId, runSeed)`, `RequestControl(requesterId)` (owner-local notification).
+- No per-frame replication; only state toggles and single fire events.
+
+### PlayerData / Settings (read-only here)
+- Reads `clearanceRank:int` (banked) for tier eligibility.
+- Optional player pref: `autoEjectOnHigherRankRequest:bool` (default false); not required for MVP.
+
+### Config (ScriptableObjects)
+- **CoreTerminalSpec**
+  - `confirmCooldownSec:int = 5`
+  - `armSeconds:int = 2`
+  - `autoEjectIdleSec:int = 120`
+  - `allowRequestCue:bool = true`
+  - `ownerOnlyEject:bool = true`
+  - `requestSpamGuardSec:int = 3`
+- **DepthTierSpec** (reuse from Clearance section)
+  - `id:string` = SURVEY | BREACH | SIEGE | COLLAPSE
+  - `requiredRank:int` = 0|1|2|3
+  - `spawnBudgetMultiplier:float`
+  - `enemyHpMultiplier:float`
+  - `reservoirYieldBonus:int`
+  - `minibossGuarantee:bool`
+  - `blueprintExtraRollChance:float`
+
+### Tablet & Panel Strings
+- Idle: `Dock key to select pressure.`
+- On dock: `[KEY DOCKED] Clearance: {rank} — Eligible: {tiers}`
+- Locked: `Access denied. Required: Clearance {rank}.`
+- Confirm: `Pressure set: {tier}. Prepare descent.`
+- Arming: `Door seal in 2…`
+- Request (owner only): `Higher Clearance requests control. Remove your key to hand over.`
+- Auto-eject: `[KEY RETURNED] Maintain tablet custody.`
+
+### Performance Notes
+- All visuals pooled: panel text, dock light, arming cue, door animation, launch siren.
+- Insert/eject debounce 0.5 s to avoid collider thrash; no Update-driven allocation.
+- With 32 players, only one Core is interactive; others see synced toggles only.
+
 ### Tablet Debrief & Ledger (UI strings)
 - Debrief header: `Run Summary`
 - Columns: `This Run` | `Lifetime`
 - Rows: `Scav Drone, Husk, Guardian, Turret, Wraith, Miniboss, Total`
 - Clearance line: `Clearance +{value}`
 - Imprint confirm: `Actions archived to lattice.`
-- Depth Relay deny: `Access denied. Required: Clearance {rank}.`
-- Depth Relay confirm: `Pressure tier locked: {tier}.`
+- Descent Core deny: `Access denied. Required: Clearance {rank}.`
+- Descent Core confirm: `Pressure set: {tier}. Prepare descent.`
 
 ## ✨ Simulation & Networking Notes
 
