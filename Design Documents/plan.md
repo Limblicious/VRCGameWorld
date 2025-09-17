@@ -2,6 +2,19 @@
 
 This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005‑GA. All thresholds, states, and budgets here exactly match the research doc to avoid drift.
 
+## Hub devices at a glance
+
+| Device           | Role (source of truth) |
+|------------------|------------------------|
+| Save Terminal    | First-time registration and initial persistence setup. |
+| Protocol Dais    | Post-run imprint/debrief station beside the Amnion. |
+| Amnion Vat       | Resuscitation if sufficient **Lumen** is banked. |
+| Printer          | Craft and upgrade gear. |
+| Locker           | Store crafted gear for later runs. |
+| Pedestal (x32)   | Diegetic tablet “parking” slots for persistence affordance. |
+| Descent Core     | Single-terminal elevator to dungeon. Hub has **no access doors**; only the elevator has a sealing shutter. |
+
+
 ---
 
 ## 0) Success Criteria (must‑meet)
@@ -286,9 +299,9 @@ Exact Implementation Changes (addendum):
 ## Ranged Combat — Plan & Acceptance
 
 **Plan**
-- Add `RangedWeaponSpec` and `BackpackChargerSpec` assets; optional `WeaponQualitySpec`.
+- Add `RangedWeaponSpec` and `TabletChargerSpec` assets; optional `WeaponQualitySpec`.
 - Implement **manual hold charging**: proximity ≤ `holdRadiusM=0.25 m`, tick at `10 Hz`, one shot added per `chargeTimeSec`.
-- Shots live in the weapon **magazine**; firing consumes from magazine; **no auto siphon** from backpack mid-fight.
+- Shots live in the weapon **magazine**; firing consumes from magazine; **no auto siphon** from tablet mid-fight.
 - Fire path: authority-validated **single-ray hitscan**; long `cooldownSec`; magazine capacity obeys `capacity` or `qualityTier` mapping.
 - Networking throttles: `charge ≤ 10/s/player`, `shot ≤ 20/s/player`; diffs ≈ **2 Hz**; dedupe keys as in research.
 
@@ -296,7 +309,7 @@ Exact Implementation Changes (addendum):
 - Charge completes in `chargeTimeSec ± 0.1 s` when held within `0.25 m`; progress ticks at **10 Hz**.
 - Weapon capacity respects spec/quality (e.g., tiered: 1/2/3 shots).
 - Cannot fire during `cooldownSec`; cannot overfill magazine; cannot auto-charge.
-- Ammo correctness: Aether is decremented only on **charge completion**; never double-charged.
+- Ammo correctness: Lumen is decremented only on **charge completion**; never double-charged.
 - Perf under 8 players charging/firing: scripts ≤ **1.5 ms**, **0-GC**; state diffs **~2 Hz**; draw calls remain < 90.
 
 ## 11) Opt-in Leaderboard (This World Only)
@@ -415,13 +428,13 @@ Tiers never alter player stats or Lumen costs; they only change world pressure a
 
 ### Success Criteria
 - Players can finish a run, read Debrief, **Imprint once**, and unlock higher tiers via banked Clearance.
-- Lumen economy remains intact and unchanged; 32-player hub stays performant and readable.
+- Lumen economy remains intact and unchanged (see [EconomySpec](./research.md#economyspec)); 32-player hub stays performant and readable.
 
 
 
 ## 13) Elevator — Descent Core (Single Terminal, Tablet-Keyed)
 
-**Intent:** Make the elevator the ritual that starts every descent. One **central terminal** in the elevator (the **Descent Core**) accepts exactly one tablet at a time (“Key Dock”). The docked tablet’s **owner** becomes the **Conductor** for that cycle. Tiers (SURVEY/BREACH/SIEGE/COLLAPSE) unlock based on the **owner’s banked Clearance rank**. Everyone can see the docked tablet and tier choice; only the **owner** can interact, preventing theft.
+**Intent:** Make the elevator the ritual that starts every descent. One **central terminal** in the elevator (the **Descent Core**) accepts exactly one tablet at a time (“Key Dock”). The docked tablet’s **owner** becomes the **Conductor** for that cycle. Tiers (SURVEY/BREACH/SIEGE/COLLAPSE) unlock based on the **owner’s banked Clearance rank**. Everyone can see the docked tablet and tier choice; only the **owner** can interact, preventing theft. The hub room has no access doors; only the elevator mechanism uses a sealing shutter.
 
 ### Device Identity & Presence
 - **Descent Core (Key Dock + Tier Panel):** Waist-height **Key Dock** in the center ring; a tall **Tier Panel** above the doors shows the current selection and locks.
