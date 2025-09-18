@@ -9,30 +9,37 @@ public class DungeonGraphManager : UdonSharpBehaviour
     [Header("State")]
     public WaypointPortal[] nodes;
     public bool[] used;
-    public bool[,] adj;
 
-    // BFS buffers
+    // Flattened adjacency (1D) — length = maxNodes * maxNodes
+    // Index helper: a*maxNodes + b
+    public bool[] adj;
+
+    // BFS buffers (preallocated; zero-GC)
     private int[] queue;
     private int[] prev;
     private bool[] visited;
+
+    // Temp buffer for GetNextHop()
+    private int[] pathTemp;
 
     [Header("Ready")]
     public bool graphReady;
 
     void Start()
     {
-        if (nodes == null || nodes.Length != maxNodes)
-        {
-            nodes = new WaypointPortal[maxNodes];
-            used = new bool[maxNodes];
-            adj = new bool[maxNodes, maxNodes];
+        if (nodes == null || nodes.Length != maxNodes) nodes = new WaypointPortal[maxNodes];
+        if (used == null || used.Length != maxNodes) used = new bool[maxNodes];
+        if (adj == null || adj.Length != maxNodes * maxNodes) adj = new bool[maxNodes * maxNodes];
 
-            queue = new int[maxNodes];
-            prev = new int[maxNodes];
-            visited = new bool[maxNodes];
-        }
+        if (queue == null || queue.Length != maxNodes) queue = new int[maxNodes];
+        if (prev == null || prev.Length != maxNodes) prev = new int[maxNodes];
+        if (visited == null || visited.Length != maxNodes) visited = new bool[maxNodes];
+        if (pathTemp == null || pathTemp.Length != maxNodes) pathTemp = new int[maxNodes];
+
         graphReady = false;
     }
+
+    private int Idx(int a, int b) { return a * maxNodes + b; }
 
     public int RegisterPortal(WaypointPortal p)
     {
@@ -45,15 +52,15 @@ public class DungeonGraphManager : UdonSharpBehaviour
                 return i;
             }
         }
-        return -1;
+        return -1; // capacity exhausted
     }
 
     public void LinkNodes(int a, int b)
     {
         if (a < 0 || b < 0 || a >= maxNodes || b >= maxNodes) return;
         if (!used[a] || !used[b]) return;
-        adj[a, b] = true;
-        adj[b, a] = true;
+        adj[Idx(a, b)] = true;
+        adj[Idx(b, a)] = true;
     }
 
     public void SealAndMarkReady()
@@ -61,7 +68,7 @@ public class DungeonGraphManager : UdonSharpBehaviour
         graphReady = true;
     }
 
-    // Fills pathBuf with src->dst indices, returns hop count, 0 if none.
+    // Fills pathBuf with src->dst indices; returns hop count (0 if unreachable)
     public int GetPath(int src, int dst, int[] pathBuf)
     {
         if (!graphReady || src < 0 || dst < 0 || src >= maxNodes || dst >= maxNodes) return 0;
@@ -84,7 +91,7 @@ public class DungeonGraphManager : UdonSharpBehaviour
 
             for (int v = 0; v < maxNodes; v++)
             {
-                if (adj[u, v] && !visited[v])
+                if (adj[Idx(u, v)] && !visited[v])
                 {
                     visited[v] = true;
                     prev[v] = u;
@@ -103,6 +110,7 @@ public class DungeonGraphManager : UdonSharpBehaviour
             cur = prev[cur];
         }
 
+        // reverse in-place
         int i0 = 0, i1 = len - 1;
         while (i0 < i1)
         {
@@ -114,11 +122,11 @@ public class DungeonGraphManager : UdonSharpBehaviour
         return len;
     }
 
+    // Convenience: next hop from 'from' to 'to', or -1 if none
     public int GetNextHop(int from, int to)
     {
-        int[] buf = queue; // reuse
-        int n = GetPath(from, to, buf);
-        if (n >= 2) return buf[1];
+        int n = GetPath(from, to, pathTemp);
+        if (n >= 2) return pathTemp[1];
         return -1;
     }
 }
