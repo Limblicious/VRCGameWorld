@@ -6,12 +6,10 @@ This plan is **1:1 aligned** with the latest `research.md` (Refined) for L2.005�
 
 | Device           | Role (source of truth) |
 |------------------|------------------------|
-| Save Terminal    | First-time registration and initial persistence setup. |
-| Protocol Dais    | Post-run imprint/debrief station beside the Amnion. |
+| Save Terminal    | First-time registration and post-run debrief/banking (Imprint). |
 | Amnion Vat       | Resuscitation if sufficient **Lumen** is banked. |
 | Printer          | Craft and upgrade gear. |
 | Locker           | Store crafted gear for later runs. |
-| Pedestal (x32)   | Diegetic tablet “parking” slots for persistence affordance. |
 | Descent Core     | Single-terminal elevator to dungeon. Hub has **no access doors**; only the elevator has a sealing shutter. |
 
 
@@ -270,7 +268,7 @@ Exact Implementation Changes (file-by-file addendum):
 
 ---
 
-## 10) Hub Interactables (Tablet / Printer / Locker / Pedestal)
+## 10) Hub Interactables (Tablet / Printer / Locker)
 
 Tablet (Stick ↔ Tablet):
 - Client-local logic, synced visibility (expand/compress bool, insert/eject anim, glow states).
@@ -283,15 +281,10 @@ Printer (Constructor):
 Locker (Stasis Vault):
 - Per-player slots (UI affordance). Synced open/occupied cues; items spawned from pools.
 
-Pedestal (Diegetic “save”):
-- Fixed 32 slots. Insert tablet → lock slot (synced), set local flag.
-  On next join, spawn tablet in that slot for same user (or show “corrupted” if unavailable).
-
 Exact Implementation Changes (addendum):
 - TabletController.cs (spec): states Stick/Tablet, proximity activation, insert/eject hooks.
 - PrinterController.cs (spec): Constructor UI/anim; local print timers; sends to Locker.
 - LockerController.cs (spec): per-player visual slots; open/occupied states.
-- PedestalSlot.cs (spec): fixed 32 slots; synced occupancy; tablet presence.
 
 
 ---
@@ -372,14 +365,13 @@ Exact Implementation Changes (addendum):
 **Intent:** Make enemies and objectives rewarding without touching the Lumen economy. Players earn **Clearance** (operator authorization) and maintain a **Kill Ledger** (by type + totals) during runs. These only **persist** when the player returns to the hub and performs an **Imprint**. Clearance gates **difficulty tiers** (instance pressure) via a hub terminal; it never grants stat buffs or discounts. Lumen remains the sole currency for ammo, healing devices, Printer crafting, and GA trade.
 
 ### Hub Devices (Diegetic Save & Access)
-- **Amnion Vat** — ominous white-blue liquid clone vat. First use **registers DNA** from the tablet; subsequent uses **Imprint** run results into persistence. This is the only place Clearance and the Kill Ledger are banked.
-  - Register (first time): `"[AMNION ONLINE]  Genomic lattice captured. Shell print authorized."`
-  - Imprint (every return): `"Telemetry condensed. Clearance advanced. Your actions will be remembered."`
-  - Death fiction: respawn is a fresh shell from the Amnion; any unspent **Lumen** is lost as already specified in the economy.
-
-- **Protocol Dais** — short plinth beside the Amnion. Insert tablet to **tally** the current run into a **Debrief** before imprint:
-  - This Run: Kills by type, Layers Cleared, Objective Beats, **Clearance Gained**
+- **Save Terminal** — registration kiosk tied to the tablet. Handles first-time registration and post-run debrief/banking (Imprint).
+  - Debrief: This Run — Kills by type, Layers Cleared, Objective Beats, **Clearance Gained**
   - Post-Imprint: Lifetime Totals (by type), **Clearance Rank**
+
+- **Amnion Vat** — ominous white-blue liquid clone vat. Resuscitates the operator on death if Amnion Reserve ≥ cost; unbanked runs are lost on wipe.
+  - Recall: `"[AMNION ONLINE] Reserve debit authorized. Shell integrity restored."`
+  - Death fiction: respawn is a fresh shell from the Amnion; any unspent **Lumen** is lost as already specified in the economy.
 
 - **Depth Relay** — Consolidated into the Elevator’s Descent Core; see section “Elevator — Descent Core (Single Terminal, Tablet-Keyed)”.
 
@@ -396,7 +388,7 @@ Award Clearance on the same authoritative tick that finalizes enemy death/goal c
 - **Optional anti-farm:** After ~30 defeats within the same layer, enemy-based Clearance awards in that layer are reduced by **50%** for that player; objective awards unaffected.
 
 ### Banking & Ranks (No Perks)
-- Clearance and Kill Ledger **do not** persist mid-run. Bank only via **Amnion Imprint** (after viewing Debrief on the Protocol Dais).
+- Clearance and Kill Ledger **do not** persist mid-run. Bank only via **Imprint at the Save Terminal** (debrief displayed at the terminal).
 - If a player dies or leaves before imprint, they keep previously banked Clearance but **lose the unbanked** portion from that run.
 - **Rank thresholds** (tunable; access-only):
   - Clearance **I** at **100**
@@ -417,14 +409,14 @@ Tiers never alter player stats or Lumen costs; they only change world pressure a
 - Clearance gates Depth tiers and fills the Kill Ledger; it never discounts or replaces Lumen systems.
 
 ### Tablet & Terminal Copy (Diegetic Lines)
-- Protocol Dais (Debrief header): `"Run Summary"`
+- Save Terminal (Debrief header): `"Run Summary"`
 - Depth Relay: Consolidated into the Elevator’s Descent Core; see section “Elevator — Descent Core (Single Terminal, Tablet-Keyed)” for copy.
 
 ### Networking & Performance (Consistent With Existing Spec)
 - **Local logic** for all hub devices; sync only short **FX/anim toggles** (no per-frame net).
 - **Depth selection** sets a single authority-owned **instance difficulty flag**; applied on next descent.
 - **Clearance awards** piggyback on existing authoritative combat resolution; no new high-frequency messages.
-- **No runtime instantiate**; Amnion/Relay/Dais use pooled VFX with ≤2 s visuals.
+- **No runtime instantiate**; Amnion/Relay/Save Terminal use pooled VFX with ≤2 s visuals.
 
 ### Success Criteria
 - Players can finish a run, read Debrief, **Imprint once**, and unlock higher tiers via banked Clearance.
@@ -467,7 +459,7 @@ Tiers never alter player stats or Lumen costs; they only change world pressure a
 - **AFK guard:** If the dock stays idle for **120 s**, the Core auto-ejects with: `“Dock idle. Key returned.”`
 
 ### Rank Gating & Access
-- **Eligibility** is based solely on the **owner’s** banked Clearance rank (from the Amnion Imprint flow).  
+- **Eligibility** is based solely on the **owner’s** banked Clearance rank (from the Save Terminal Imprint flow).
 - If a tier is out of reach:  
   `“Access denied. Required: Clearance II.”`  
   The higher-rank player may **request control**, and the owner can hand over by ejecting.
@@ -544,15 +536,6 @@ Data (SOs): BlueprintSpec, WeaponSpec tiers.
 UI/ergonomics: Lock icons; success/fail text.
 Success criteria: No net spam; readable for bystanders.
 
-Loop/Feature name: Pedestal save (diegetic)
-Player flow (1–6 steps): 1) Insert tablet into slot; 2) Slot locks (synced); 3) Local flag set; 4) Next join spawns tablet in same slot; 5) Retrieve; 6) Slot clears.
-Entities involved: PedestalSlot(32), Tablet.
-Authority & net: Sync slot occupancy & tablet presence only.
-Ticks/timing: Instant.
-Data (SOs): —
-UI/ergonomics: Slot labels; “imprint stored” text.
-Success criteria: No conflicts; believable persistence.
-
 Loop/Feature name: Leaderboard opt-in (this world)
 Player flow (1–6 steps): 1) Player toggles “Publish” on tablet; 2) Mint token via /mint (store in PlayerData); 3) Link display name via /link (world=cradle); 4) Show confirmation on tablet; 5) On future joins, auto-link if name changed; 6) Player can toggle off anytime (stop outbound).
 Entities involved: Tablet UI, LeaderboardClient (spec), PlayerData.
@@ -572,9 +555,9 @@ UI/ergonomics: Big legible list; player highlighted if present.
 Success criteria: No spam; board matches site; smooth at 32p.
 
 Loop/Feature name: Debrief → Imprint (Bank Clearance & Ledger)
-Player flow (1–6 steps): 1) Return to hub after a run; 2) Protocol Dais tallies this-run kills, layer clears, and objectives and displays Clearance gained; 3) Insert tablet into Amnion Vat; 4) Imprint writes Clearance & Kill Ledger to persistence; 5) Tablet updates lifetime totals; Clearance rank may increase; 6) Proceed to the Descent Core or Printer.
-Entities involved: Protocol Dais, Amnion Vat, Tablet, PlayerData.
-Authority & net: Local logic; synced device FX; write occurs on imprint; no per-frame net.
+Player flow (1–6 steps): 1) Return to hub after a run; 2) Save Terminal tallies this-run kills, layer clears, and objectives and displays Clearance gained; 3) Imprint at the Save Terminal writes Clearance & Kill Ledger to persistence; 4) Tablet updates lifetime totals; Clearance rank may increase; 5) Proceed to the Descent Core or Printer; 6) Amnion Vat remains ready for recovery if AR ≥ cost.
+Entities involved: Save Terminal, Tablet, PlayerData.
+Authority & net: Local logic; synced device FX; write occurs on Save Terminal imprint; no per-frame net.
 Ticks/timing: Debrief instant; Imprint interaction ≤2 s.
 Data (SOs): none (uses configured tables; see research.md).
 UI/ergonomics: “This Run / Lifetime” columns; clear one-line confirmation on success.

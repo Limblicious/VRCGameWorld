@@ -8,12 +8,10 @@ This document maps out the current system structure of the VRChat world `L2.005-
 
 | Device           | Role (source of truth) |
 |------------------|------------------------|
-| Save Terminal    | First-time registration and initial persistence setup. |
-| Protocol Dais    | Post-run imprint/debrief station beside the Amnion. |
+| Save Terminal    | First-time registration and post-run debrief/banking (Imprint). |
 | Amnion Vat       | Resuscitation if sufficient **Lumen** is banked. |
 | Printer          | Craft and upgrade gear. |
 | Locker           | Store crafted gear for later runs. |
-| Pedestal (x32)   | Diegetic tablet “parking” slots for persistence affordance. |
 | Descent Core     | Single-terminal elevator to dungeon. Hub has **no access doors**; only the elevator has a sealing shutter. |
 
 
@@ -105,12 +103,11 @@ VRDefaultWorldScene
 - TabletController.cs — Player tablet state & proximity activation; insert/eject hooks.
 - PrinterController.cs — Constructor UI/anim; local print timers; sends to Locker.
 - LockerController.cs — Per-player visual slots; open/occupied states.
-- PedestalSlot.cs — Fixed 32 slots; synced occupancy; tablet presence.
 - LeaderboardClient.cs — Spec for Udon behavior that handles: /mint, /link, /clear, /leaderboard.txt, /me.txt calls via VRCStringDownloader. Master-only submit; passive pulls for display.
 - LeaderboardDisplay.cs — Spec: parses leaderboard.txt (“rank|name|clears” per line) and updates TextMeshPro in tablet/terminal. Pull every 30–60s or on demand.
 - Tablet UI (update) — Add opt-in toggle + status line; call LeaderboardClient methods.
-- AmnionVatController.cs — Handles Register (first-time) and Imprint (bank write to PlayerData). Plays short synced FX; debounces repeats; guards against double-write.
-- ProtocolDaisController.cs — Aggregates this-run tallies into a Debrief summary (local), exposes values to tablet UI.
+- AmnionVatController.cs — Handles **Resuscitation only** (no registration, no imprint); short synced FX; debounces repeats.
+- SaveTerminalController.cs — Handles first-time **Registration** and post-run **Debrief/Imprint** (bank/bind); shows summary UI; guards double-write via lastImprintRunId.
 - DescentCoreTerminalController.cs — Single-terminal elevator controller: manages Key Dock ownership, tier list, confirm cooldown, arm/launch, and auto-eject. Emits Launch(tier, runId, runSeed) once; absorbs prior “Depth Relay” selection if it existed. The hub room has no access doors; only the elevator mechanism uses a sealing shutter.
 - TabletDockBay.cs — Generic station bay behavior used by the Core (and reusable by Printer/Crucible/GA terminals): captures ownerId on insert, disables non-owner colliders, handles 0.5 s debounce and 120 s idle auto-eject.
 - DepthRelayTerminal.cs — Difficulty selection consolidated into **Descent Core**; see DescentCoreTerminalController.cs.
