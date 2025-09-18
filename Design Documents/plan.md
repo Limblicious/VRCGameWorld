@@ -104,11 +104,7 @@ Plan enforces deterministic active-window hits, a hitbox visualizer for validati
   * `Attack → Recover`: active window finished
   * `Recover → Chase/Patrol`: cooldown elapsed; if still sensed → `Chase`, else `Patrol`
   * `* → Dead`: HP ≤ 0
-* **Movement model**:
-
-  * **Waypoint graph per tile** (from `TileMeta`), stitched at generation time
-  * **A**\* when target tile changes; otherwise **steer‑to‑node** with 2 forward raycasts + side offset
-  * **Direct chase** if LOS clear (skip pathfinding)
+* **Movement model**: Primary **portal navgraph (BFS)** for cross-tile routing; local steering stays on the tile’s `WaypointGroup`. Seam cooldown + owner-only tick policy per [`Navigation — Global Portal Navgraph (specs)`](#navigation-—-global-portal-navgraph-specs).
 
 ### `DungeonSpawner.cs`
 
@@ -123,6 +119,81 @@ Plan enforces deterministic active-window hits, a hitbox visualizer for validati
 * Zone enter/exit debounce **200 ms** shared across presence + networking events.
 * Zones toggle **AI ticks**, **enemy colliders**, **spawn routines**, **ambient SFX/VFX**.
 * All zone events route through instance owner.
+
+## Navigation — Global Portal Navgraph (specs)
+
+### `DungeonGraphManager.cs`
+
+*Purpose*: Global portal-node graph for cross-tile routing (primary model).
+
+*Data (arrays only)*:
+- `const int MAX_NODES = 128`, `const int MAX_NEIGHBORS = 4`
+- `Vector3[] nodePos`
+- `WaypointGroup[] nodeGroup`
+- `int[] nodeGroupIndex`
+- `int[,] neighbors` (size `MAX_NODES × MAX_NEIGHBORS`)
+- `int[] neighborCount`
+- Scratch: `int[] queue`, `int[] prev`, `bool[] visited`
+- Optional: `int[,] nextHop` (precomputed first-hop table)
+
+*API*:
+- `int RegisterPortal(WaypointPortal p)`
+- `bool LinkNodes(int a, int b)` // call for matched doorway pairs
+- `void AutoLinkClosePairs(float maxDoorGap = 0.25f)` // proximity fallback
+- `int GetNearestNode(Vector3 pos)`
+- `int GetNodeForGroupIndex(WaypointGroup g, int idx)`
+- `int GetPath(int startNode, int goalNode, int[] outPath)` // BFS, returns length
+- `void PrecomputeNextHop()` // optional: fill `nextHop[src,dst]`
+
+*Edge flags (future-proof)*:
+- `EDGE_WALK, EDGE_WIDE_ONLY, EDGE_STAIRS, EDGE_FLY_ONLY, EDGE_QUIET, EDGE_LOCKED`
+- Filter in BFS/Precompute by enemy capability mask.
+
+*Perf targets*: O(V+E) per BFS; or O(1) hop with `nextHop`. Zero allocations after Start.
+
+### `WaypointPortal.cs` (tile prefab component)
+
+- Fields: `WaypointGroup localGroup; int localIndex; int nodeId (runtime)`
+- Placed at each doorway; generator registers and links these.
+
+### `EnemyNavigator.cs`
+
+*Purpose*: Route across rooms via graph; step inside tiles via `WaypointGroup`.
+
+*State*:
+- `DungeonGraphManager Graph`
+- `WaypointGroup Group` (current tile)
+- Route buffers: `int[] route` (~32), `int routeLen`, `int routeIdx`
+- Tick throttle: `const float AI_TICK = 0.05f;` (staggered globally)
+
+*Flow*:
+- `SetDestinationByNode(goalNode)`:
+  - Compute path via BFS or iterate using `nextHop`.
+  - Initialize `routeIdx = 0`.
+- `Update()` (owner-only, every `AI_TICK`):
+  - Move toward current portal’s `Group.GetPoint(portalIndex)` using existing local stepper.
+  - On arrival: **hop** to next node → `Group = nodeGroup[next]; local index = nodeGroupIndex[next];`
+  - Apply **seam cooldown** `0.3–0.5 s`.
+  - `RequestSerialization()` only on state changes (route advance).
+
+*Enemy type support*:
+- `capabilityMask` filters edges; examples:
+  - Brute: `WALK | WIDE_ONLY`
+  - Drone: `FLY_ONLY`
+  - Ranged: `WALK | QUIET_ROUTE`
+
+### Generation integration
+
+- After tiles are placed and stitched:
+  - `RegisterPortal(...)` for all portals.
+  - `LinkNodes(a.nodeId, b.nodeId)` for each matched doorway.
+  - (Optional) `PrecomputeNextHop()` if using fast hop lookup.
+
+### Acceptance (plan)
+
+- Graph build **before** enemies spawn/enable.
+- Owner-only navigation tick at **≥ 0.05 s**; **0 GC** in profiler.
+- Door lock/unlock = flip an edge flag → routes adapt (BFS) or re-run `PrecomputeNextHop()` (small N).
 
 ---
 

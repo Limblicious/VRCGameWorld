@@ -147,14 +147,43 @@ VRDefaultWorldScene
 - `Recover → Chase/Patrol`: cooldown elapsed AND target still sensed → `Chase`, else `Patrol`.
 - `* → Dead`: HP ≤ 0.
 
-**Movement Model (NavMesh‑free):** VRChat cannot bake navmeshes at runtime, and our dungeon is assembled dynamically. Therefore:
+## 🧠 Navigation — Global Portal Navgraph (BFS)
 
-- **No Unity NavMesh at runtime.**
-- Use **tile waypoints graph**: each `TileMeta` provides local waypoint nodes and edge connectors at entrances. On generation, the graph is stitched (O(N) joins) into a dungeon‑wide sparse graph.
-- **Pathing:** lightweight A* on the graph (nodes ≤ ~8 per tile) when target tile changes; otherwise **steer‑to‑next‑node** with simple obstacle avoidance (two forward raycasts + side offset).
-- **Chase fallback:** if LOS is clear, skip pathfinding and steer directly to player (fast path).
+**Primary model.** Cross-tile routing uses a tiny **global navgraph** composed of **portal nodes** (doorways). Edges connect opposing doorways when tiles are stitched at generation. On this graph, **BFS** returns the **fewest-door transitions** route (unweighted). Inside each tile, actors still move via the tile’s local `WaypointGroup`.
 
+**Data model (arrays only, zero-GC):**
+- **Nodes** = portals/doorways only. Target cap: **20–60** (upper bound ~120 on PC).
+- `nodePos: Vector3[]`, `nodeGroup: WaypointGroup[]`, `nodeGroupIndex: int[]`
+- Adjacency: `neighbors[node, slot]` with `neighborCount[node]`, **MAX_NEIGHBORS = 4**
+- Scratch: `queue[]`, `prev[]`, `visited[]` (preallocated)
 
+**Routing:**
+- **BFS** for unweighted shortest-hop paths (O(V+E)); early exit on goal.
+- Optional precompute: **`nextHop[src,dst]`** (e.g., 128×128 ints ≈ 64 KB) built once after stitching → O(1) hop lookup.
+
+**Edge flags & capability masks (multi-enemy support):**
+- Edge flags: `WALK`, `WIDE_ONLY`, `STAIRS`, `FLY_ONLY`, `QUIET_ROUTE`, `LOCKED`
+- Enemy capability mask filters edges during BFS or precompute.
+
+**Runtime policy:**
+- **Owner-only AI** ticks (instance master or spawner owner).
+- Tick throttle: **50–100 ms** per enemy (staggered).
+- **Seam cooldown** 0.3–0.5 s after a portal hop to prevent oscillation.
+- **Distance culling**: pause ticks for tiles with no nearby players.
+
+**New specs (summary):**
+- `DungeonGraphManager.cs` — registers portals, links neighbors at stitch time, serves BFS & optional `nextHop`. Arrays only.
+- `EnemyNavigator.cs` — consumes graph routes; performs **portal-to-portal** hops while local movement uses the tile’s `WaypointGroup`.
+
+**Acceptance (navigation):**
+- Arrays-only (no `List<>`, no LINQ, no runtime allocations).
+- Graph nodes **≤ 60** (tests include 100-node stress).
+- Per-enemy ticks at **≥ 0.05 s**; **0 GC** in profiler.
+- Late-joiners immediately see motion (owner drives; transforms via ObjectSync).
+
+See detailed class specs in [`Design Documents/plan.md`](./plan.md#navigation-—-global-portal-navgraph-specs).
+
+Legacy fallback: per-tile-only patrol loops remain for debug builds but are not the shipping behavior.
 ### Enemy AI — State Machine (update)
 States: Idle → Patrol → Chase → Attack → Stagger → Knockdown → Recover → Dead
 - Stagger: anim flinch; timer; cancels Attack.
