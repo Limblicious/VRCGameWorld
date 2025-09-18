@@ -10,12 +10,10 @@ We follow a **spec‑first** workflow (Dex loop): research → plan → implemen
 
 | Device           | Role (source of truth) |
 |------------------|------------------------|
-| Save Terminal    | First-time registration and initial persistence setup. |
-| Protocol Dais    | Post-run imprint/debrief station beside the Amnion. |
+| Save Terminal    | First-time registration and post-run debrief/banking (Imprint). |
 | Amnion Vat       | Resuscitation if sufficient **Lumen** is banked. |
 | Printer          | Craft and upgrade gear. |
 | Locker           | Store crafted gear for later runs. |
-| Pedestal (x32)   | Diegetic tablet “parking” slots for persistence affordance. |
 | Descent Core     | Single-terminal elevator to dungeon. Hub has **no access doors**; only the elevator has a sealing shutter. |
 
 

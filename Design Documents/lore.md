@@ -31,12 +31,10 @@
 
 | Device           | Role (source of truth) |
 |------------------|------------------------|
-| Save Terminal    | First-time registration and initial persistence setup. |
-| Protocol Dais    | Post-run imprint/debrief station beside the Amnion. |
+| Save Terminal    | First-time registration and post-run debrief/banking (Imprint). |
 | Amnion Vat       | Resuscitation if sufficient **Lumen** is banked. |
 | Printer          | Craft and upgrade gear. |
 | Locker           | Store crafted gear for later runs. |
-| Pedestal (x32)   | Diegetic tablet “parking” slots for persistence affordance. |
 | Descent Core     | Single-terminal elevator to dungeon. Hub has **no access doors**; only the elevator has a sealing shutter. |
 
 
@@ -64,7 +62,7 @@
 
 ## Progression Without Perks — Clearance & Depth
 - **Clearance** is access authority earned by action (shared credit): enemy defeats, objective beats, **layer clears**.
-- **Bank** Clearance only by **Imprint** (Debrief at the Protocol Dais → Imprint at the Amnion).
+- **Bank** Clearance only by **Imprint at the Save Terminal**.
 - Clearance **gates** pressure tiers; it never buffs stats or discounts costs.
 
 ### Pressure Tiers (instance setting)
@@ -76,12 +74,10 @@
 Higher tiers increase **world pressure** (denser spawns, sturdier enemies, richer reservoir yields, miniboss guarantees). Players do **not** gain power from Clearance; only access.
 
 ## The Hub Devices (Core Interfaces)
-- **Save Terminal (Registration):** create your save profile and link the tablet for initial persistence.
-- **Protocol Dais (Debrief):** aggregate the run summary beside the Amnion and handle post-run imprint.
-- **Amnion Vat (Recovery & Banking):** deposit Lumen to **AR**; recall on death if AR ≥ cost (see [EconomySpec](./research.md#economyspec)).
+- **Save Terminal (Registration & Debrief):** create your save profile and handle post-run debrief/banking (Imprint).
+- **Amnion Vat (Recovery):** resuscitates on death if AR ≥ cost (see [EconomySpec](./research.md#economyspec)).
 - **Constructor (Printer):** convert Lumen into **matter** (weapons/upgrades).
 - **Locker:** stores crafted gear for this save.
-- **Pedestal array (x32):** tablet parking slots for persistence affordance.
 - **Anodyne Crucible:** hub healing for Lumen.
 - **GA Ledger Terminal:** optional Lumen→Scrip exchange.
 
@@ -122,16 +118,15 @@ Panel copy:
 2) **Prep:** craft/print, heal, **deposit Lumen to AR**.  
 3) **Descent Core:** dock tablet → tier (by banked Clearance) → launch.  
 4) **In layers:** harvest **Lumen** (taps/vats), fight, open shortcuts, find **Uplink**.  
-5) **Return:** **Protocol Dais (Debrief)** → **Imprint at Amnion** (bank Clearance & ledger) → print/trade/deposit.  
+5) **Return:** **Save Terminal (Debrief/Imprint)** → bank Clearance & ledger → print/trade/deposit.
 6) **Death:**  
    - **Insured:** recall (AR debited), continue.  
    - **Uninsured:** recall denied → **world save wiped** → back to teleporter, start again.
 
 ## Glossary
 - **Lumen:** white-blue energy gel used as currency.  
-- **Tablet (Key):** visible identity device; owner-locked when docked.
-- **Protocol Dais:** post-run debrief station beside the Amnion (Imprint).  
-- **Save Terminal:** handle first-time registration and save creation only.  
+- **Tablet (Key):** visible identity device; owner-locked when bound.
+- **Save Terminal:** first-time registration and post-run debrief/banking (Imprint).
 - **Amnion Vat / Amnion Reserve (AR):** Lumen-backed resuscitation bank and recall.  
 - **Constructor (Printer):** converts Lumen into matter (gear).  
 - **Locker:** stores crafted gear (per save).  
