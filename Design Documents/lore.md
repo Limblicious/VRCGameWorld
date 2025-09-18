@@ -1,12 +1,12 @@
 # THE CRADLE (HUB) — LORE SUMMARY (v0.4)
 
 ## Premise
-- Players arrive in the **Hub** (lore name: **The Cradle**), a node inside a **galaxy-spanning Superstructure** abandoned eons ago by its creators and inhabitants.
-- Universe is an alternate reality far into the future where unverse has stopped expanding and is slowly collapsing back into the singularity that creates the big bang. This universal collapse is distorting timespace, resulting in the teleporters in the superstructure to malfunction and pull beings from other universes into this one (that's how the player ends up in this world)
+- Players arrive in a teleporter room, colloquially named **The Cradle**. This room is located in a solar system spanning facility connected to a galaxy-wide superstructure. This superstructure was abandoned eons ago by its creators, who were able to harness enough power from this universe to create a portal at its center to leave this dimension. Escaping the collapse that inevitably awaits this universe.
+- This universe is an alternate reality far into the future where universal expansion has stopped and is beginning to reverse. This known universe is slowly collapsing back into the singularity of the big bang. This collapse is what causes the distorting timespace, resulting in the teleporters in the superstructure to malfunction and pull beings from other dimensions into this one (that's how the player ends up in this world)
 - The Superstructure still runs under **Caretaker AIs**—ancient, impartial maintenance processes. Earlier arrivals formed the **Grand Authority (GA)**, a being from a parallel universe was teleported in and was able to adapt to the systems of this universe. Imperfect, but able to coordinate logistics for other survivors and adapt systems for habitation support.
 
 ## What You Are
-- An **Operator** recognized by the machinery because you bind to a cryptographic **tablet** on arrival, adapted technology left by GA for others.
+- An **Operator** recognized by the machinery because you bind to a cryptographic **tablet** on arrival, adapted technology left by GA for other new arrivals.
 - The tablet is your passkey, used to identity, interface, and barter with the GA for additional support.
 
 ## The Medium: Lumen
