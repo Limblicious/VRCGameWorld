@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unity Setup Checklist — Interactive Tracker</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7fb;
+      --fg: #1e2330;
+      --muted: #5a6072;
+      --border: rgba(30, 35, 48, 0.12);
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --badge-bg: rgba(63, 108, 246, 0.12);
+      --badge-fg: #2e4bb6;
+      --accent: #3f6cf6;
+      --accent-hover: #3358d4;
+      --accent-contrast: #ffffff;
+      --note-bg: rgba(63, 108, 246, 0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11131a;
+        --fg: #e9ecf5;
+        --muted: #a1a8c5;
+        --border: rgba(233, 236, 245, 0.15);
+        --card-bg: rgba(24, 27, 36, 0.9);
+        --badge-bg: rgba(124, 155, 255, 0.18);
+        --badge-fg: #9fb3ff;
+        --accent: #7c9bff;
+        --accent-hover: #a0b7ff;
+        --accent-contrast: #0d0f19;
+        --note-bg: rgba(124, 155, 255, 0.16);
+      }
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.65;
+    }
+    header.top-bar {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      z-index: 20;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .header-content h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    button.control {
+      border: none;
+      border-radius: 999px;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    button.control.primary {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      box-shadow: 0 8px 18px rgba(63, 108, 246, 0.25);
+    }
+    button.control.primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+    button.control.secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    button.control.secondary:hover {
+      background: rgba(63, 108, 246, 0.08);
+      color: var(--accent-hover);
+    }
+    button.control:focus-visible {
+      outline: 3px solid rgba(63, 108, 246, 0.35);
+      outline-offset: 2px;
+    }
+    main.content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 96px 1.5rem 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .section {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 1.6rem 1.8rem;
+      box-shadow: 0 18px 45px rgba(17, 19, 26, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .section.level-1 {
+      background: transparent;
+      box-shadow: none;
+      border: none;
+      padding: 0;
+    }
+    .section.level-1 > h2 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    .section.level-0 {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+    }
+    .section h2, .section h3, .section h4, .section h5, .section h6 {
+      margin: 0 0 0.85rem;
+      font-weight: 600;
+      color: var(--fg);
+    }
+    .section h2 {
+      font-size: 1.25rem;
+    }
+    .section h3 {
+      font-size: 1.05rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .section h4 {
+      font-size: 1rem;
+    }
+    .section p.section-text {
+      margin: 0.35rem 0 0.85rem;
+      color: var(--muted);
+    }
+    ul.task-group {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .task-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .task-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .task-main {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .task-checkbox {
+      width: 1.1rem;
+      height: 1.1rem;
+      margin-top: 0.2rem;
+      flex-shrink: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .task-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .task-text {
+      font-weight: 600;
+      line-height: 1.5;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .badge {
+      background: var(--badge-bg);
+      color: var(--badge-fg);
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
+    }
+    .task-notes {
+      margin-left: 1.9rem;
+      padding-left: 1rem;
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .task-notes p {
+      margin: 0;
+    }
+    .task-notes code {
+      background: var(--note-bg);
+    }
+    ul.task-group ul.task-group {
+      margin-top: 0.7rem;
+    }
+    ul.task-group ul.task-group .task-item {
+      border-color: rgba(63, 108, 246, 0.16);
+    }
+    code {
+      background: rgba(63, 108, 246, 0.12);
+      color: var(--badge-fg);
+      padding: 0.1rem 0.4rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    footer.page-footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      padding: 1.5rem 1rem 2.5rem;
+    }
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      button.control {
+        width: auto;
+      }
+      main.content {
+        padding-top: 120px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <div class="header-content">
+      <h1 id="doc-title">Unity Setup Checklist</h1>
+      <div class="actions">
+        <button type="button" class="control primary" id="reset-btn">Reset All</button>
+        <button type="button" class="control secondary" id="export-json-btn">Export JSON</button>
+        <button type="button" class="control secondary" id="export-md-btn">Export Markdown (with states)</button>
+      </div>
+    </div>
+  </header>
+  <main class="content" id="content"></main>
+  <footer class="page-footer">
+    <p>Generated on <time id="generated-at"></time> · States persist per-browser via localStorage.</p>
+  </footer>
+  <script>
+    (() => {
+      const storagePrefix = 'L2005GA:UnitySetupChecklist:';
+      const markdownSource = String.raw`# Unity Setup Checklist — L2.005-GA MVP
+
+**TL;DR Quick Start**
+1. Drop \`_Managers\` prefab group into the scene and place \`DungeonGraphManager\`, \`EconomyConfig\`, \`FXRouter\`, \`AudioRouter\`, and \`OwnershipHelpers\` under it.
+2. Lay out \`_TilesAndPortals\` tiles (10m x 10m) and add \`WaypointPortal\` objects with primitive trigger colliders on every doorway.
+3. Assign each portal's \`graph\` to the shared \`DungeonGraphManager\`, then link seams and call \`DungeonGraphManager.SealAndMarkReady()\` immediately after the runtime layout finishes and **before** enabling any enemies or spawners.
+4. Spawn \`_Enemies/Enemy_Drone_00\`, set its \`EnemyNavigator.graph\` reference, call \`OnSpawnAtPortal(startIdx)\`, and wire target portal indices to validate traversal.
+5. Verify \`_UI\` and \`_Test\` helpers (BillboardText, DevWeapon + RateLimiter) are wired, ensure pooled FX/audio assets resolve, and confirm the navgraph returns valid paths between at least two portals.
+
+## ✅ Checkbox Scene Hierarchy
+\`\`\`
+- [ ] VRDefaultWorldScene
+  - [ ] _Managers
+    - [ ] DungeonGraphManager (component)
+    - [ ] EconomyConfig (component)
+    - [ ] OwnershipHelpers (component)
+    - [ ] FXRouter (component)
+      - [ ] FXPool (SimpleObjectPool)
+    - [ ] AudioRouter (component)
+  - [ ] _TilesAndPortals
+    - [ ] Tile_00 (10m x 10m)
+      - [ ] Portal_A (WaypointPortal + BoxCollider isTrigger)
+      - [ ] Portal_B (WaypointPortal + BoxCollider isTrigger)
+    - [ ] Tile_01 (10m x 10m)
+      - [ ] Portal_C (WaypointPortal + BoxCollider isTrigger)
+      - [ ] Portal_D (WaypointPortal + BoxCollider isTrigger)
+  - [ ] _Enemies
+    - [ ] Enemy_Drone_00 (EnemyNavigator + VRCObjectSync + Damageable + Health)
+  - [ ] _UI
+    - [ ] HintText (BillboardText)
+  - [ ] _Test (optional)
+    - [ ] DevWeapon (WeaponBase + RateLimiter)
+  - [ ] _PhaseB (placeholders for later)
+    - [ ] SaveTerminal
+    - [ ] AmnionVat
+    - [ ] PrinterConsole
+    - [ ] LockerBay
+    - [ ] ElevatorRoot (DescentCoreController)
+    - [ ] ElevatorShutter_L / ElevatorShutter_R
+    - [ ] ElevatorTerminal
+    - [ ] TabletDevice
+\`\`\`
+
+### Component Loadout
+| [ ] GameObject | Required Components | Serialized fields to wire | Notes |
+| --- | --- | --- | --- |
+| [ ] DungeonGraphManager | \`DungeonGraphManager\` | \`maxNodes\` (capacity), assign in-scene portals as they register | Call \`SealAndMarkReady()\` once generation finishes. Arrays auto-allocate in \`Start()\`. |
+| [ ] EconomyConfig | \`EconomyConfig\` | (none) | Scene singleton read by \`RateLimiter\`. |
+| [ ] OwnershipHelpers | \`OwnershipHelpers\` | (none) | Utility for ensuring network ownership; optional helper object. |
+| [ ] FXRouter | \`FXRouter\` | \`pool\`, \`fxIdToPoolIndex[]\` | \`pool\` references \`FXPool\` \`SimpleObjectPool\`. Pooled prefabs must self-despawn. |
+| [ ] FXPool | \`SimpleObjectPool\` | \`prefab\`, \`parentForSpawned\`, \`size\` | Warmed automatically in \`Start()\`. Prefab should be disabled by default. |
+| [ ] AudioRouter | \`AudioRouter\` | \`sources[]\` (array of \`AudioSource\`) | Provide at least one one-shot source per routed cue; transforms repositioned on \`PlayAt\`. |
+| [ ] Portal_* | \`WaypointPortal\`, \`BoxCollider (IsTrigger)\` | \`graph\`, optional \`prelinkedNeighbors[]\` | Register portals on \`Start\`; ensure collider faces doorway seam. |
+| [ ] Enemy_Drone_* | \`EnemyNavigator\`, \`VRCObjectSync\`, \`Damageable\`, \`Health\` | \`EnemyNavigator.graph\`, \`EnemyNavigator.objectSync\`, \`Health.maxValue\` | \`EnemyNavigator\` allocates path buffer on \`Start\`; ensure VRCObjectSync owns the drone. |
+| [ ] Enemy_Drone_* (Health wiring) | \`Health\` (component already above) | none beyond defaults; optional FX hooks | Health is \`[UdonSynced]\`; ensure ownership transfer allowed before Modify. |
+| [ ] DevWeapon | \`WeaponBase\` | \`limiter\`, optional \`fx\`, \`audio\` | Place child \`RateLimiter\` component and reference it. |
+| [ ] RateLimiter (child of DevWeapon) | \`RateLimiter\` | \`economy\` | Reference the scene \`EconomyConfig\`. Verifies ≤8 hits/s, ≤10 charge/s. |
+| [ ] HintText | \`BillboardText\` | \`face\` (optional override) | Defaults to \`transform\`; faces \`Camera.main\` during \`LateUpdate\`. |
+| [ ] ElevatorShutter_* | \`NetworkedToggle\` | \`targets[]\` (panels) | Placeholder until DescentCore scripts arrive; toggle panels via synced bool. |
+
+## Assets & Prefabs Checklist
+- [ ] Create a prefab for **Enemy_Drone** with \`EnemyNavigator\` + \`VRCObjectSync\` + primitive collider + \`Damageable\` + \`Health\`.
+- [ ] Create FX prefab(s) (e.g., \`FX_Puff\`) compatible with \`SimpleObjectPool\`, each with a timed despawn script invoking \`pool.Despawn(gameObject)\`.
+- [ ] Create/assign \`AudioSource\` set for \`AudioRouter\` (one per routed cue, spatialized as needed).
+- [ ] Configure a **test weapon** prefab using \`WeaponBase\` + \`RateLimiter\` (+ optional FX/audio) to validate hit rate throttling.
+- [ ] Author any additional prefabs referenced by pools/routers (e.g., damage numbers, impact markers) with pooling hooks.
+
+## **3D Assets to Model (Blender)**
+### Phase A (now)
+- [ ] **DungeonTile_10x10m** — Floor quad with doorway cutouts; exact footprint 10m × 10m × ≤0.5m. Pivot at tile center (0,0,0).  
+  Colliders: BoxColliders for floor/walls only (no MeshColliders).  
+  Child anchors: \`[ ] PortalAnchor_A/B/C/D\` empties at doorway centers (1m wide openings at mid-edges).
+- [ ] **PortalFrame** — Door surround sized to 3m tall × 1m thick × 1.5m wide. Pivot at floor centerline.  
+  Child: \`[ ] PortalTrigger\` (GameObject) with BoxCollider (isTrigger) to host \`WaypointPortal\`.
+- [ ] **EnemyDrone_Capsule** — 1.2m tall capsule or cube body, pivot at base center.  
+  Collider: CapsuleCollider or BoxCollider aligned with mesh.  
+  Attach points: \`[ ] NavAnchor\` (transform for AI), \`[ ] FX_Hardpoint\` (optional for VFX).
+- [ ] **FX_Puff** — 0.5m particle mesh or quad billboard. Pivot at center.  
+  Collider: none.  
+  Include script hook or animation event to call pooled despawn.
+- [ ] **WorldUI_HintText** — Flat card or text mesh sized ~0.5m wide. Pivot at center bottom.  
+  Child anchor: \`[ ] TextRoot\` (assign to \`BillboardText.face\`).
+
+### Phase B (placeholders for later)
+- [ ] **SaveTerminal** — 2m tall kiosk with control panel. Pivot at base center.  
+  Colliders: BoxCollider covering cabinet; \`[ ] TabletDock\` anchor front-center.
+- [ ] **AmnionVat** — 2.5m tall cylinder + lid. Pivot at floor center.  
+  Colliders: CapsuleCollider for vat, BoxCollider for base.  
+  Anchors: \`[ ] VatLid\`, \`[ ] FX_Bubbles\`.
+- [ ] **PrinterConsole** — 1.2m tall console. Pivot at base center.  
+  Collider: BoxCollider; \`[ ] PrintSlot\` anchor for spawned items.
+- [ ] **LockerBay** — 4m wide wall segment with doors. Pivot at base center.  
+  Colliders: BoxColliders per door; anchors \`[ ] Door_L\`, \`[ ] Door_R\`.
+- [ ] **ElevatorCabin** — 3m × 3m × 3m cab. Pivot at floor center.  
+  Colliders: BoxCollider walls/floor.  
+  Anchors: \`[ ] DescentCoreAnchor\`, \`[ ] PlayerSpawnPoints\` (array of empties).
+- [ ] **ElevatorShutters** — Two 3m × 1.5m panels. Pivot at hinge edge.  
+  Colliders: BoxColliders per panel; anchors \`[ ] TogglePivot\` for \`NetworkedToggle\` movement.
+- [ ] **ElevatorTerminal** — Wall-mounted interface. Pivot at mount point.  
+  Collider: BoxCollider; \`[ ] TabletDock\` anchor.
+- [ ] **TabletDevice** — Collapsible baton + tablet (~0.7m). Pivot at grip center.  
+  Anchors: \`[ ] DockInsert\`, \`[ ] ScreenRoot\` for future tablet scripts.
+
+*(All measurements in meters; ensure pivots align with Unity's (0,0,0) when dropped into scenes.)*
+
+## Per-system Wiring
+- [ ] BFS graph: Place \`DungeonGraphManager\`; assign every \`WaypointPortal.graph\`; link seams; call \`SealAndMarkReady()\` after generation; verify \`GetPath(start, goal, buf)\` returns ≥2 entries.
+- [ ] Enemy nav: Spawn \`Enemy_Drone_00\` at a portal; call \`OnSpawnAtPortal(idx)\`; set \`SetTargetPortalIndex(goalIdx)\`; confirm traversal obeys seam cooldown.
+- [ ] Economy/rates: Drop \`EconomyConfig\` in scene; assign it to any \`RateLimiter\`; fire \`DevWeapon\` to confirm ≤8 hits per second.
+- [ ] FX/Audio: Warm \`SimpleObjectPool\` via \`Start\`; ensure pooled FX auto-despawn; assign \`AudioRouter.sources[]\` to scene \`AudioSource\` objects.
+- [ ] UI: Confirm \`BillboardText\` rotates toward \`Camera.main\` and text remains legible from multiple positions.
+
+## Sanity Checks
+- [ ] Profile runtime for **no per-frame GC allocations**.
+- [ ] Confirm owner-only ticks (remote clients idle while master simulates enemies).
+- [ ] Ensure enemies traverse portals only after the graph is sealed.
+- [ ] Use primitive colliders only (Box/Capsule/Sphere); no MeshColliders in phase A assets.
+- [ ] Call \`RequestSerialization()\` only when \`Health\` values change.
+
+## Known Gaps / Next
+- [ ] Implement Interactables (SaveTerminal, AmnionVat, PrinterConsole, LockerBay).
+- [ ] Implement Elevator controllers (DescentCoreController, ElevatorShutter, ElevatorTerminal).
+- [ ] Implement Weapons (RangedEmitter, MeleeBlade) with pooled projectiles/FX.
+- [ ] Tablet suite (BindOnPickup, Wallet, ChargeLink, HoloDisplay).
+- [ ] EnemySpawner + DroneController behavior layers.
+`;
+      const storage = (() => {
+        try {
+          const probeKey = storagePrefix + '__probe__';
+          localStorage.setItem(probeKey, "1");
+          localStorage.removeItem(probeKey);
+          return localStorage;
+        } catch (err) {
+          console.warn("localStorage unavailable; checklist states will not persist.", err);
+          return null;
+        }
+      })();
+
+      const lines = markdownSource.split(/\r?\n/);
+      const root = { type: 'section', title: '', level: 0, children: [] };
+      let sectionStack = [root];
+      let taskStack = [];
+      let tableHeaders = null;
+      let docTitle = 'Unity Setup Checklist';
+      let inFence = false;
+
+      lines.forEach((line, index) => {
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('```')) {
+          inFence = !inFence;
+          taskStack = [];
+          tableHeaders = null;
+          return;
+        }
+
+        const headingMatch = !inFence && line.match(/^(#{1,6})\s+(.*)$/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          const title = headingMatch[2].trim();
+          if (level === 1) {
+            docTitle = title;
+          }
+          const section = { type: 'section', title, level, children: [] };
+          while (sectionStack.length && sectionStack[sectionStack.length - 1].level >= level) {
+            sectionStack.pop();
+          }
+          const parent = sectionStack[sectionStack.length - 1];
+          parent.children.push(section);
+          sectionStack.push(section);
+          taskStack = [];
+          tableHeaders = null;
+          return;
+        }
+
+        if (!inFence && /^\s*\|/.test(line)) {
+          const cells = line.split('|');
+          if (cells.length >= 3) {
+            const trimmedCells = cells.slice(1, -1).map(cell => cell.trim());
+            if (!trimmedCells.length) {
+              return;
+            }
+            const separatorRow = trimmedCells.every(cell => /^-+$/.test(cell.replace(/\s+/g, '')));
+            if (separatorRow) {
+              return;
+            }
+            const firstCell = trimmedCells[0] || '';
+            if (/^\[( |x|X)\]/.test(firstCell)) {
+              const match = firstCell.match(/^\[( |x|X)\]\s*(.*)$/);
+              const mark = match ? match[1].toLowerCase() : ' ';
+              const label = match ? match[2].trim() : firstCell.replace(/^\[( |x|X)\]\s*/, '').trim();
+              if (!label) {
+                tableHeaders = trimmedCells;
+                return;
+              }
+              const normalizedLabel = label.toLowerCase();
+              if (normalizedLabel === 'gameobject' && trimmedCells.length > 1) {
+                tableHeaders = trimmedCells.map(cell => cell.replace(/^\[( |x|X)\]\s*/, '').trim());
+                return;
+              }
+              const notes = [];
+              for (let i = 1; i < trimmedCells.length; i++) {
+                const headerTitle = tableHeaders && tableHeaders[i] ? tableHeaders[i].trim() : '';
+                const value = trimmedCells[i];
+                if (!value) continue;
+                const noteText = headerTitle ? `${headerTitle}: ${value}` : value;
+                notes.push({ text: noteText, raw: noteText });
+              }
+              const headingPath = sectionStack.slice(1).map(s => s.title);
+              const sectionPath = headingPath.slice();
+              const task = {
+                type: 'task',
+                rawText: label,
+                originalLine: line,
+                lineIndex: index,
+                defaultChecked: mark === 'x',
+                children: [],
+                notes,
+                sectionPath,
+                indentLevel: 0,
+                sourceType: 'table'
+              };
+              const parentSection = sectionStack[sectionStack.length - 1];
+              parentSection.children.push(task);
+              taskStack = [task];
+              return;
+            }
+            tableHeaders = trimmedCells;
+            return;
+          }
+        }
+
+        const taskMatch = line.match(/^(\s*)([-*])\s+\[( |x|X)\]\s+(.*)$/);
+        if (taskMatch) {
+          const indentSpaces = taskMatch[1].length;
+          const indentLevel = Math.floor(indentSpaces / 2);
+          while (taskStack.length > indentLevel) {
+            taskStack.pop();
+          }
+          const checkChar = taskMatch[3];
+          const rawText = taskMatch[4].trim();
+          const headingPath = sectionStack.slice(1).map(s => s.title);
+          const parentTasks = [];
+          for (let i = 0; i < indentLevel; i++) {
+            if (taskStack[i]) {
+              parentTasks.push(taskStack[i].rawText);
+            }
+          }
+          const sectionPath = headingPath.concat(parentTasks);
+          const task = {
+            type: 'task',
+            rawText,
+            originalLine: line,
+            lineIndex: index,
+            defaultChecked: checkChar.toLowerCase() === 'x',
+            children: [],
+            notes: [],
+            sectionPath,
+            indentLevel,
+            sourceType: 'list',
+            bullet: taskMatch[2]
+          };
+          let parentNode;
+          if (indentLevel > 0) {
+            parentNode = taskStack[indentLevel - 1] || sectionStack[sectionStack.length - 1];
+          } else {
+            parentNode = sectionStack[sectionStack.length - 1];
+          }
+          parentNode.children.push(task);
+          taskStack[indentLevel] = task;
+          taskStack.length = indentLevel + 1;
+          tableHeaders = null;
+          return;
+        }
+
+        if (!trimmed) {
+          tableHeaders = null;
+          return;
+        }
+
+        const spaces = (line.match(/^(\s*)/) || [''])[1].length;
+        const indentLevel = Math.floor(spaces / 2);
+        let target = null;
+        for (let i = Math.min(indentLevel, taskStack.length - 1); i >= 0; i--) {
+          const candidate = taskStack[i];
+          if (candidate) {
+            target = candidate;
+            break;
+          }
+        }
+        if (target) {
+          target.notes.push({ text: trimmed, raw: line });
+        } else {
+          const parentSection = sectionStack[sectionStack.length - 1];
+          parentSection.children.push({ type: 'paragraph', text: trimmed });
+        }
+        tableHeaders = null;
+      });
+
+      const contentEl = document.getElementById('content');
+      const allTasks = [];
+
+      const docTitleEl = document.getElementById('doc-title');
+      docTitleEl.textContent = docTitle;
+      document.title = `${docTitle} — Interactive Checklist`;
+
+      function escapeHtml(str) {
+        return str.replace(/[&<>"']/g, char => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[char]);
+      }
+
+      function renderInlineMarkdown(text) {
+        if (!text) return '';
+        const codeSegments = [];
+        let html = escapeHtml(text);
+        html = html.replace(/`([^`]+)`/g, (match, code) => {
+          const idx = codeSegments.length;
+          codeSegments.push(code);
+          return `@@CODE${idx}@@`;
+        });
+        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(?!\s)([^*]+)\*/g, '<em>$1</em>');
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        html = html.replace(/@@CODE(\d+)@@/g, (match, idx) => `<code>${codeSegments[idx]}</code>`);
+        return html;
+      }
+
+      const skipBadges = new Set(['none', '(none)', 'component', 'components', 'optional', 'optional helper object', 'optional helper', 'scene singleton', 'child anchors', 'child anchor', 'anchors', 'colliders', 'collider']);
+
+      function shouldIncludeBadge(token) {
+        if (!token) return false;
+        const clean = token.trim().replace(/\.$/, '');
+        if (!clean) return false;
+        const lower = clean.toLowerCase();
+        if (skipBadges.has(lower)) return false;
+        if (lower.startsWith('optional ')) return false;
+        if (lower.startsWith('ensure ')) return false;
+        if (lower.startsWith('child ')) return false;
+        if (!/[a-z0-9]/i.test(clean)) return false;
+        return true;
+      }
+
+      function gatherBadges(task) {
+        const tokens = new Set();
+        const sources = [task.rawText];
+        if (task.notes) {
+          task.notes.forEach(note => sources.push(note.text));
+        }
+        sources.forEach(source => {
+          if (!source) return;
+          let match;
+          const parenRegex = /\(([^)]+)\)/g;
+          while ((match = parenRegex.exec(source))) {
+            match[1].split(/[,;+]/).forEach(chunk => {
+              const candidate = chunk.trim();
+              if (shouldIncludeBadge(candidate)) {
+                tokens.add(candidate);
+              }
+            });
+          }
+          const codeRegex = /`([^`]+)`/g;
+          while ((match = codeRegex.exec(source))) {
+            const candidate = match[1].trim();
+            if (shouldIncludeBadge(candidate)) {
+              tokens.add(candidate);
+            }
+          }
+        });
+        return Array.from(tokens);
+      }
+
+      function hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = (hash << 5) - hash + str.charCodeAt(i);
+          hash |= 0;
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+      }
+
+      function renderTask(task) {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+
+        const mainRow = document.createElement('div');
+        mainRow.className = 'task-main';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'task-checkbox';
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'task-content';
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'task-text';
+        textSpan.innerHTML = renderInlineMarkdown(task.rawText);
+        textContainer.appendChild(textSpan);
+
+        const badges = gatherBadges(task);
+        if (badges.length) {
+          const badgeRow = document.createElement('div');
+          badgeRow.className = 'badge-row';
+          badges.forEach(token => {
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = token;
+            badgeRow.appendChild(badge);
+          });
+          textContainer.appendChild(badgeRow);
+        }
+
+        mainRow.appendChild(checkbox);
+        mainRow.appendChild(textContainer);
+        li.appendChild(mainRow);
+
+        if (task.notes && task.notes.length) {
+          const notesContainer = document.createElement('div');
+          notesContainer.className = 'task-notes';
+          task.notes.forEach(note => {
+            const noteP = document.createElement('p');
+            noteP.innerHTML = renderInlineMarkdown(note.text);
+            notesContainer.appendChild(noteP);
+          });
+          li.appendChild(notesContainer);
+        }
+
+        if (task.children && task.children.length) {
+          const childList = document.createElement('ul');
+          childList.className = 'task-group';
+          task.children.forEach(childTask => {
+            childList.appendChild(renderTask(childTask));
+          });
+          li.appendChild(childList);
+        }
+
+        const storageKey = storagePrefix + hashString(task.sectionPath.join(' > ') + ' :: ' + task.rawText);
+        task.storageKey = storageKey;
+        const storedValue = storage ? storage.getItem(storageKey) : null;
+        const initialChecked = storedValue === null ? task.defaultChecked : storedValue === '1';
+        checkbox.checked = initialChecked;
+        task.checked = initialChecked;
+        task.checkbox = checkbox;
+
+        checkbox.addEventListener('change', () => {
+          task.checked = checkbox.checked;
+          if (!storage) return;
+          if (checkbox.checked === task.defaultChecked) {
+            storage.removeItem(storageKey);
+          } else {
+            storage.setItem(storageKey, checkbox.checked ? '1' : '0');
+          }
+        });
+
+        allTasks.push(task);
+        return li;
+      }
+
+      function renderSection(section, container) {
+        const sectionEl = document.createElement('section');
+        sectionEl.className = `section level-${section.level}`;
+        container.appendChild(sectionEl);
+
+        if (section.level > 0 && section.title) {
+          const headingTag = `h${Math.min(section.level + 1, 6)}`;
+          const heading = document.createElement(headingTag);
+          heading.innerHTML = renderInlineMarkdown(section.title);
+          sectionEl.appendChild(heading);
+        }
+
+        let currentList = null;
+        section.children.forEach(child => {
+          if (child.type === 'task') {
+            if (!currentList) {
+              currentList = document.createElement('ul');
+              currentList.className = 'task-group';
+              sectionEl.appendChild(currentList);
+            }
+            currentList.appendChild(renderTask(child));
+          } else {
+            currentList = null;
+            if (child.type === 'paragraph') {
+              const p = document.createElement('p');
+              p.className = 'section-text';
+              p.innerHTML = renderInlineMarkdown(child.text);
+              sectionEl.appendChild(p);
+            } else if (child.type === 'section') {
+              renderSection(child, sectionEl);
+            }
+          }
+        });
+
+        if (section.children.length === 0) {
+          sectionEl.classList.add('empty');
+        }
+      }
+
+      root.children.forEach(child => {
+        if (child.type === 'section') {
+          renderSection(child, contentEl);
+        } else if (child.type === 'paragraph') {
+          const p = document.createElement('p');
+          p.className = 'section-text';
+          p.innerHTML = renderInlineMarkdown(child.text);
+          contentEl.appendChild(p);
+        }
+      });
+
+      const generatedAt = document.getElementById('generated-at');
+      if (generatedAt) {
+        generatedAt.textContent = new Date().toLocaleString();
+      }
+
+      function resetAll() {
+        allTasks.forEach(task => {
+          task.checkbox.checked = task.defaultChecked;
+          task.checked = task.defaultChecked;
+          if (storage) {
+            storage.removeItem(task.storageKey);
+          }
+        });
+      }
+
+      function exportJson() {
+        const payload = allTasks.map(task => ({
+          id: task.storageKey,
+          sectionPath: task.sectionPath,
+          text: task.rawText,
+          checked: task.checkbox.checked
+        }));
+        const formatted = JSON.stringify(payload, null, 2);
+        downloadFile('UnitySetupChecklist.json', formatted, 'application/json');
+      }
+
+      function exportMarkdown() {
+        const linesCopy = markdownSource.split(/\r?\n/);
+        allTasks.forEach(task => {
+          if (typeof task.lineIndex !== 'number') return;
+          const line = linesCopy[task.lineIndex];
+          if (!line) return;
+          if (task.sourceType === 'table') {
+            linesCopy[task.lineIndex] = line.replace(/(\|\s*)\[( |x|X)\]/, (match, prefix) => {
+              return `${prefix}[${task.checkbox.checked ? 'x' : ' '}]`;
+            });
+          } else {
+            linesCopy[task.lineIndex] = line.replace(/^(\s*[-*]\s+\[)( |x|X)(\])/, (match, prefix, mark, suffix) => {
+              return `${prefix}${task.checkbox.checked ? 'x' : ' '}${suffix}`;
+            });
+          }
+        });
+        downloadFile('UnitySetupChecklist_checked.md', linesCopy.join('\n'), 'text/markdown');
+      }
+
+      function downloadFile(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
+      const resetButton = document.getElementById('reset-btn');
+      const exportJsonButton = document.getElementById('export-json-btn');
+      const exportMarkdownButton = document.getElementById('export-md-btn');
+
+      if (resetButton) {
+        resetButton.addEventListener('click', resetAll);
+      }
+      if (exportJsonButton) {
+        exportJsonButton.addEventListener('click', exportJson);
+      }
+      if (exportMarkdownButton) {
+        exportMarkdownButton.addEventListener('click', exportMarkdown);
+      }
+    })();
+  </script>
+</body>
+</html>
