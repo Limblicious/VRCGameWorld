@@ -1,21 +1,21 @@
-# THE CRADLE (HUB) — LORE SUMMARY (v0.3)
+# THE CRADLE (HUB) — LORE SUMMARY (v0.4)
 
 ## Premise
-- You arrive in the **Hub** (lore name: **The Cradle**), a node inside a **galaxy-spanning Superstructure** left by long-extinct humans native to this collapsing alternate universe.
-- Growing **space-time anomalies** yank people from other realities into hubs like this. You are a **real human** (not printed or cloned) who was accidentally teleported here.
-- The Superstructure still runs under **Caretaker AIs**—ancient, impartial processes. Earlier human arrivals formed the **Grand Authority (GA)**, a text-only bureaucracy that coordinates logistics but does not control the system.
+- Players arrive in a teleporter room, colloquially named **The Cradle**. This room is located in a solar system spanning facility connected to a galaxy-wide superstructure. This superstructure was abandoned eons ago by its creators, who were able to harness enough power from this universe to create a portal at its center to leave this dimension. Escaping the collapse that inevitably awaits this universe.
+- This universe is an alternate reality far into the future where universal expansion has stopped and is beginning to reverse. This known universe is slowly collapsing back into the singularity of the big bang. This collapse is what causes the distorting timespace, resulting in the teleporters in the superstructure to malfunction and pull beings from other dimensions into this one (that's how the player ends up in this world)
+- The Superstructure still runs under **Caretaker AIs**—ancient, impartial maintenance processes. Earlier arrivals formed the **Grand Authority (GA)**, a being from a parallel universe was teleported in and was able to adapt to the systems of this universe. Imperfect, but able to coordinate logistics for other survivors and adapt systems for habitation support.
 
 ## What You Are
-- An **Operator** recognized by the machinery because you bind to a cryptographic **tablet** on arrival.
-- The tablet is your identity, interface, and key; everyone can **see** it, only you can **use** it when docked (owner-locked to prevent theft).
+- An **Operator** recognized by the machinery because you bind to a cryptographic **tablet** on arrival, adapted technology left by GA for other new arrivals.
+- The tablet is your passkey, used to identity, interface, and barter with the GA for additional support.
 
 ## The Medium: Lumen
 - **Lumen** is a viscous white-blue energy gel circulating through the Superstructure.
-- You **harvest** it only from infrastructure—never from enemies—at:
+- Players **harvest** it only from infrastructure—never from enemies—at:
   - **Capillary Taps** (short channel, modest yield)
   - **Reservoir Vats** (long channel, big yield; draws patrols)
   - **Dead Ports** (brief reactivation puzzle, one-shot yield)
-- You **spend** Lumen to:
+- Players **spend** Lumen to:
   - **Fuel weapons** (ammo/charges via tablet-to-weapon ports)
   - **Heal** at devices (Field **Mediports** in layers; hub **Anodyne Crucible**)
   - **Craft/upgrade** at the **Constructor (Printer)** (permanent gear for this save)
@@ -137,4 +137,4 @@ Panel copy:
 - **Descent Core:** single-terminal elevator; tablet-keyed; polite REQUEST CONTROL handoff.  
 - **Scav Drone:** hovering construct; most common foe; no Lumen drops.
 
-**Core theme:** You’re a displaced human surviving inside a **galactic machine** that barely acknowledges you. The **tablet** makes you legible, **Lumen** fuels your choices, **Clearance** lets you press deeper, and the **Amnion** will catch you—**only if you’ve banked the charge.**
+**Core theme:** You’re a displaced operator surviving inside a **galactic machine** that barely acknowledges you. The **tablet** makes you legible, **Lumen** fuels your choices, **Clearance** lets you press deeper, and the **Amnion** will catch you—**only if you’ve banked the charge.**
