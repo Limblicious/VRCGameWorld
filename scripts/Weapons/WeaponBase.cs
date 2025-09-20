@@ -20,7 +20,7 @@ public class WeaponBase : UdonSharpBehaviour
 
     public virtual void OnHit(GameObject target)
     {
-        Damageable d = (Damageable)target.GetComponent(typeof(Damageable));
+        Damageable d = target.GetComponent<Damageable>();
         if (d != null) d.ApplyDamage(damage, 0);
     }
 

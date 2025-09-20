@@ -1,6 +1,7 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Components;
 
 public class EnemyNavigator : UdonSharpBehaviour
 {
@@ -15,7 +16,7 @@ public class EnemyNavigator : UdonSharpBehaviour
 
     [Header("Movement")]
     public float moveSpeed = 1.5f;
-    public VRC.SDKBase.VRCObjectSync objectSync;
+    public VRCObjectSync objectSync;
 
     [Header("Runtime")]
     public int currentPortalIndex = -1;

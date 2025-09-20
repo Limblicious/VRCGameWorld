@@ -9,7 +9,8 @@ public class DungeonGraphManager : UdonSharpBehaviour
     [Header("State")]
     public WaypointPortal[] nodes;
     public bool[] used;
-    public bool[,] adj;
+    // Flattened adjacency (1D) — length = maxNodes * maxNodes
+    public bool[] adj;
 
     // BFS buffers
     private int[] queue;
@@ -19,13 +20,15 @@ public class DungeonGraphManager : UdonSharpBehaviour
     [Header("Ready")]
     public bool graphReady;
 
+    private int Idx(int a, int b) { return a * maxNodes + b; }
+
     void Start()
     {
         if (nodes == null || nodes.Length != maxNodes)
         {
             nodes = new WaypointPortal[maxNodes];
             used = new bool[maxNodes];
-            adj = new bool[maxNodes, maxNodes];
+            adj = new bool[maxNodes * maxNodes];
 
             queue = new int[maxNodes];
             prev = new int[maxNodes];
@@ -52,8 +55,8 @@ public class DungeonGraphManager : UdonSharpBehaviour
     {
         if (a < 0 || b < 0 || a >= maxNodes || b >= maxNodes) return;
         if (!used[a] || !used[b]) return;
-        adj[a, b] = true;
-        adj[b, a] = true;
+        adj[Idx(a, b)] = true;
+        adj[Idx(b, a)] = true;
     }
 
     public void SealAndMarkReady()
@@ -84,7 +87,7 @@ public class DungeonGraphManager : UdonSharpBehaviour
 
             for (int v = 0; v < maxNodes; v++)
             {
-                if (adj[u, v] && !visited[v])
+                if (adj[Idx(u, v)] && !visited[v])
                 {
                     visited[v] = true;
                     prev[v] = u;
