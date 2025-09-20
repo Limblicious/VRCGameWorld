@@ -2,6 +2,8 @@
 - You MUST follow every guardrail. If a requested change conflicts, refuse and propose a compliant alternative.
 - After edits, run a repo-wide validation: search for forbidden patterns and print matches.
 
+**MVP Task Note:** Always read and follow CLAUDE.md before each task; adhere to repo paths shown in the VS Code screenshot; never create new folders or rename files for MVP tasks; prefer minimal [UdonSynced] and explicit save via PersistenceManager.
+
 # Claude Code — UdonSharp Project Staging (VRChat)
 
 **Repo mode:** staging-only. All scripts live under `/scripts/...` and will later be copy-pasted into Unity. Do **not** move or rename design docs.
@@ -71,6 +73,13 @@ var pos = Camera.main.transform.position;
 1. No `Camera.main` in any `Assets/` or `scripts/` C# files.
 2. Use LocalPlayer head tracking for player view data.
 3. Keep other UdonSharp guardrails: no `GetComponent(typeof(T))` on user types; no multidimensional arrays `T[,]`; correct VRChat SDK namespaces.
+
+### Override Guardrail — No Non-Existent Base Methods
+
+**Do not create overrides for non-existent base methods.** Before writing `override` in a subclass, open the base type and confirm the exact signature is declared `virtual` or `abstract`. If it isn't, stop and adapt to existing base APIs (e.g., use `TryFire()`/`OnHit(...)` in `WeaponBase`). As a compile-time check, search the base file for the exact method name/signature you plan to override. If not found, this task fails.
+
+**Pre-Commit Checklist:**
+* If a subclass adds `override`, paste the base method signature above it as a comment and cite the source file/line. If you cannot cite it, remove the override.
 
 ### UdonSharp "No Reflection" Guardrail (Do Not Break)
 UdonSharp cannot use `typeof()` on user-defined types or reflection patterns. Use generic APIs instead.

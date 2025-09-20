@@ -81,6 +81,42 @@ We follow a **spec‑first** workflow (Dex loop): research → plan → implemen
 
 ---
 
+## MVP Loop Wiring
+
+### TabletController (/scripts/World/)
+- **tabletVisual**: NetworkedToggle component to show/hide tablet
+- **prompt**: BillboardText component for UI prompt display
+
+### ElevatorPortal (/scripts/World/)
+- **destination**: Transform marking teleport destination position
+- **blackoutUI**: GameObject for fade overlay (optional)
+
+### EnemySpawner (/scripts/Enemies/)
+- **enemyPrefab**: GameObject prefab for enemy instances
+- **spawnPoints**: Transform array of spawn locations
+
+### RangedWeapon (/scripts/Weapons/)
+- **muzzle**: Transform for raycast origin point
+- **limiter**: RateLimiter component for rate limiting
+
+### DropItem (/scripts/World/)
+- **type**: ItemType enum (Resource or Part)
+- **id**: Type-specific ID for the item
+
+### DropTable (/scripts/Enemies/)
+- **dropPrefabs**: DropItem prefab array for possible drops
+- **weights**: Float array of drop weights
+
+### BankTerminal (/scripts/World/)
+- **playerInventory**: Inventory component to deposit from
+- **displayText**: BillboardText for showing balances
+
+### PersistenceManager (/scripts/Core/)
+- **tabletController**: TabletController for hasInitiated state
+- **bankTerminal**: BankTerminal for bank balance persistence
+
+---
+
 ## 🤝 Contributing
 
 - PRs **must** update `research.md`/`plan.md` when changing behavior.  
