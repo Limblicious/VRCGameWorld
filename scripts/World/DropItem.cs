@@ -31,6 +31,10 @@ public class DropItem : UdonSharpBehaviour
     public AudioRouter audio;
     public FXRouter fx;
 
+    [Header("SFX/FX IDs")]
+    public int sfxId;
+    public int fxId;
+
     public override void Interact()
     {
         CollectItem();
@@ -64,14 +68,14 @@ public class DropItem : UdonSharpBehaviour
         }
 
         // Play feedback effects
-        if (audio != null) audio.PlayClip("item_pickup");
-        if (fx != null) fx.PlayEffect("pickup_glow");
+        if (audio != null) audio.PlayAt(sfxId, transform.position); // AudioRouter.PlayAt(int id, Vector3 pos)
+        if (fx != null) fx.PlayAt(fxId, transform.position); // FXRouter.PlayAt(int id, Vector3 pos)
 
         // Return to pool or disable
         SimpleObjectPool pool = GetComponent<SimpleObjectPool>();
         if (pool != null)
         {
-            pool.ReturnToPool(gameObject);
+            pool.Despawn(gameObject); // SimpleObjectPool.Despawn(GameObject instance)
         }
         else
         {

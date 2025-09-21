@@ -2,7 +2,12 @@
 - You MUST follow every guardrail. If a requested change conflicts, refuse and propose a compliant alternative.
 - After edits, run a repo-wide validation: search for forbidden patterns and print matches.
 
-**MVP Task Note:** Always read and follow CLAUDE.md before each task; adhere to repo paths shown in the VS Code screenshot; never create new folders or rename files for MVP tasks; prefer minimal [UdonSynced] and explicit save via PersistenceManager.
+-**MVP Task Note:** Always read and follow CLAUDE.md before each task; adhere to repo paths shown in the VS Code screenshot; never create new folders or rename files for MVP tasks; prefer minimal [UdonSynced] and explicit save via PersistenceManager.
+
+## Guardrails/Coding Rules
+API-FIRST RULE — never invent helper methods. Before calling any method on project helpers (AudioRouter, FXRouter, SimpleObjectPool, NetworkedToggle, WeaponBase), open the helper’s source and copy the exact signature. If a method doesn’t exist, adapt to an existing one or add a tiny wrapper inside the helper with a one-line comment explaining why.
+Override Safety: Only write override when the base class declares that exact signature as virtual or abstract. Paste the base signature above your override and cite the file/line.
+VRC Ownership: Always call Networking.SetOwner(VRCPlayerApi player, GameObject obj) with (Networking.LocalPlayer, target) — reversed order is a build-fail.
 
 # Claude Code — UdonSharp Project Staging (VRChat)
 
@@ -73,6 +78,7 @@ var pos = Camera.main.transform.position;
 1. No `Camera.main` in any `Assets/` or `scripts/` C# files.
 2. Use LocalPlayer head tracking for player view data.
 3. Keep other UdonSharp guardrails: no `GetComponent(typeof(T))` on user types; no multidimensional arrays `T[,]`; correct VRChat SDK namespaces.
+4. For every helper call added/edited, include a one-line comment citing the source file and method signature (e.g., `// FXRouter.PlayAt(int id, Vector3 pos)`). If you can’t cite it, don’t commit.
 
 ### Override Guardrail — No Non-Existent Base Methods
 

@@ -82,7 +82,7 @@ public class EnemySpawner : UdonSharpBehaviour
             enemy.transform.rotation = spawnPoint.rotation;
 
             // Assign ownership to spawner
-            Networking.SetOwner(enemy, Networking.LocalPlayer);
+            Networking.SetOwner(Networking.LocalPlayer, enemy);
 
             currentAliveCount++;
         }
