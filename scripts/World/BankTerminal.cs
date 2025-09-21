@@ -19,6 +19,10 @@ public class BankTerminal : UdonSharpBehaviour
     public AudioRouter audio;
     public FXRouter fx;
 
+    [Header("SFX/FX IDs")]
+    public int sfxId;
+    public int fxId;
+
     [Header("Bank Storage")]
     int bankResources = 0;
     int bankParts = 0;
@@ -51,8 +55,8 @@ public class BankTerminal : UdonSharpBehaviour
         // Play feedback if something was deposited
         if (depositedResources > 0 || depositedParts > 0)
         {
-            if (audio != null) audio.PlayClip("bank_deposit");
-            if (fx != null) fx.PlayEffect("deposit_glow");
+            if (audio != null) audio.PlayAt(sfxId, transform.position); // AudioRouter.PlayAt(int id, Vector3 pos)
+            if (fx != null) fx.PlayAt(fxId, transform.position); // FXRouter.PlayAt(int id, Vector3 pos)
         }
 
         // Update display
@@ -71,8 +75,8 @@ public class BankTerminal : UdonSharpBehaviour
 
         if (deposited > 0)
         {
-            if (audio != null) audio.PlayClip("bank_deposit");
-            if (fx != null) fx.PlayEffect("deposit_glow");
+            if (audio != null) audio.PlayAt(sfxId, transform.position); // AudioRouter.PlayAt(int id, Vector3 pos)
+            if (fx != null) fx.PlayAt(fxId, transform.position); // FXRouter.PlayAt(int id, Vector3 pos)
         }
 
         UpdateDisplay();
@@ -90,8 +94,8 @@ public class BankTerminal : UdonSharpBehaviour
 
         if (deposited > 0)
         {
-            if (audio != null) audio.PlayClip("bank_deposit");
-            if (fx != null) fx.PlayEffect("deposit_glow");
+            if (audio != null) audio.PlayAt(sfxId, transform.position); // AudioRouter.PlayAt(int id, Vector3 pos)
+            if (fx != null) fx.PlayAt(fxId, transform.position); // FXRouter.PlayAt(int id, Vector3 pos)
         }
 
         UpdateDisplay();

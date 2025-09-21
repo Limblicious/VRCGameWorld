@@ -22,6 +22,10 @@ public class TabletController : UdonSharpBehaviour
     public AudioRouter audio;
     public FXRouter fx;
 
+    [Header("SFX/FX IDs")]
+    public int sfxId;
+    public int fxId;
+
     [Header("State")]
     [UdonSynced] public bool hasInitiated = false;
 
@@ -38,7 +42,7 @@ public class TabletController : UdonSharpBehaviour
         var localPlayer = Networking.LocalPlayer;
         if (localPlayer == null) return;
 
-        Networking.SetOwner(gameObject, localPlayer);
+        if (!Networking.IsOwner(gameObject)) Networking.SetOwner(localPlayer, gameObject);
 
         // Set initiated state
         hasInitiated = true;
@@ -47,8 +51,8 @@ public class TabletController : UdonSharpBehaviour
         UpdateVisuals();
 
         // Play feedback
-        if (audio != null) audio.PlayClip("tablet_activate");
-        if (fx != null) fx.PlayEffect("tablet_glow");
+        if (audio != null) audio.PlayAt(sfxId, transform.position); // AudioRouter.PlayAt(int id, Vector3 pos)
+        if (fx != null) fx.PlayAt(fxId, transform.position); // FXRouter.PlayAt(int id, Vector3 pos)
 
         // Sync state
         RequestSerialization();
@@ -63,7 +67,7 @@ public class TabletController : UdonSharpBehaviour
     {
         if (tabletVisual != null)
         {
-            tabletVisual.SetToggleState(!hasInitiated);
+            tabletVisual.Set(!hasInitiated); // NetworkedToggle.Set(bool on)
         }
 
         if (prompt != null)

@@ -53,17 +53,17 @@ public class DropTable : UdonSharpBehaviour
         Vector3 spawnPos = basePosition + offset;
 
         // Spawn item
-        GameObject dropInstance;
+        GameObject dropInstance = null;
         if (itemPool != null)
         {
-            dropInstance = itemPool.GetFromPool();
-            if (dropInstance != null)
+            if (itemPool.TrySpawn(out dropInstance)) // SimpleObjectPool.TrySpawn(out GameObject instance)
             {
                 dropInstance.transform.position = spawnPos;
                 dropInstance.SetActive(true);
             }
         }
-        else
+
+        if (dropInstance == null)
         {
             dropInstance = VRCInstantiate(selectedPrefab.gameObject);
             if (dropInstance != null)
