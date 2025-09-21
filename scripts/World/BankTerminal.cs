@@ -105,18 +105,28 @@ public class BankTerminal : UdonSharpBehaviour
     {
         if (displayText == null) return;
 
-        // Format display text
-        string displayStr = string.Format(
-            "BANK TERMINAL\n\nResources: {0}\nParts: {1}\n\n[Interact to Deposit All]",
-            bankResources,
-            bankParts
-        );
+        // Show appropriate panel based on bank state
+        // TODO: Inspector wiring - assign preauthored panels to BillboardText.panels:
+        // Index 0: "BANK TERMINAL - Empty" (when both resources and parts are 0)
+        // Index 1: "BANK TERMINAL - Has Resources" (when resources > 0, parts = 0)
+        // Index 2: "BANK TERMINAL - Has Parts" (when parts > 0, resources = 0)
+        // Index 3: "BANK TERMINAL - Has Both" (when both resources > 0 and parts > 0)
 
-        // Update text component
-        TextMesh textMesh = displayText.GetComponent<TextMesh>();
-        if (textMesh != null)
+        if (bankResources == 0 && bankParts == 0)
         {
-            textMesh.text = displayStr;
+            displayText.ShowIndex(0); // Empty bank
+        }
+        else if (bankResources > 0 && bankParts == 0)
+        {
+            displayText.ShowIndex(1); // Has resources only
+        }
+        else if (bankResources == 0 && bankParts > 0)
+        {
+            displayText.ShowIndex(2); // Has parts only
+        }
+        else
+        {
+            displayText.ShowIndex(3); // Has both
         }
     }
 

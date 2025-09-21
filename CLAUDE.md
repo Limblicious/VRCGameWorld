@@ -5,9 +5,12 @@
 -**MVP Task Note:** Always read and follow CLAUDE.md before each task; adhere to repo paths shown in the VS Code screenshot; never create new folders or rename files for MVP tasks; prefer minimal [UdonSynced] and explicit save via PersistenceManager.
 
 ## Guardrails/Coding Rules
-API-FIRST RULE — never invent helper methods. Before calling any method on project helpers (AudioRouter, FXRouter, SimpleObjectPool, NetworkedToggle, WeaponBase), open the helper’s source and copy the exact signature. If a method doesn’t exist, adapt to an existing one or add a tiny wrapper inside the helper with a one-line comment explaining why.
+API-FIRST RULE — never invent helper methods. Before calling any method on project helpers (AudioRouter, FXRouter, SimpleObjectPool, NetworkedToggle, WeaponBase), open the helper's source and copy the exact signature. If a method doesn't exist, adapt to an existing one or add a tiny wrapper inside the helper with a one-line comment explaining why.
+**Udon-safe references only.** Never use Unity scene-search APIs that aren't exposed to Udon (e.g., `FindObjectOfType<T>`, `FindObjectsOfType<T>`, generic `GetComponent<T>` on non-Udon types). Always expose references via serialized fields and wire them in the Inspector, or use a tiny Udon reference holder (e.g., `InventoryRef` with `public Inventory value`). If a reference is missing at runtime, log once and abort the action—do not attempt dynamic scene searches.
 Override Safety: Only write override when the base class declares that exact signature as virtual or abstract. Paste the base signature above your override and cite the file/line.
 VRC Ownership: Always call Networking.SetOwner(VRCPlayerApi player, GameObject obj) with (Networking.LocalPlayer, target) — reversed order is a build-fail.
+**No nested types.** UdonSharp does not support nested type declarations. Do not declare `enum`, `class`, or `struct` inside another class. Always place shared types in their own top-level files (e.g., `/scripts/Core/ItemType.cs`) and mark them `public`.
+**UI in Udon: state panels, not text APIs.** If the current SDK doesn't expose TMP/UGUI APIs, do not write text at runtime. Use preauthored UI panels (one per message) and toggle them with `GameObject.SetActive` through a wrapper (`BillboardText.ShowIndex(int)`). No `.text=` or `.SetText()` calls in Udon scripts.
 
 # Claude Code — UdonSharp Project Staging (VRChat)
 
@@ -86,6 +89,9 @@ var pos = Camera.main.transform.position;
 
 **Pre-Commit Checklist:**
 * If a subclass adds `override`, paste the base method signature above it as a comment and cite the source file/line. If you cannot cite it, remove the override.
+* Search `FindObjectOfType`, `FindObjectsOfType`, and `GetComponent<` in the diff. If any remain and are not Udon-exposed, replace with serialized references before committing.
+* Search for `class `, `enum `, `struct ` inside other type bodies; lift any nested declarations to top-level files before committing.
+* Search for `.text =` and `.SetText(` in Udon scripts – none should remain. All UI shows via `BillboardText.ShowIndex`.
 
 ### UdonSharp "No Reflection" Guardrail (Do Not Break)
 UdonSharp cannot use `typeof()` on user-defined types or reflection patterns. Use generic APIs instead.
