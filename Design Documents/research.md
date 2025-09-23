@@ -481,3 +481,20 @@ With AI transitions, movement model, tile adjacency/randomization, zone semantic
 ## ✅ Next Step: Plan Phase
 
 With the research clarified and explicit, proceed to `plan.md` for implementation details (combat focus, authority sync, and performance guarantees).
+## Combat — Staff Tip vs Enemy Core  *(2025-09-23)*
+
+**Intent:** Replace generic melee with a **precision touch** mechanic that is readable in VR and cheap to simulate.
+
+**Mechanic:**
+- Kill condition: `StaffTip` trigger enters `EnemyCore` collider.
+- Orbiters provide moving coverage that creates timing/gap reads without AI-heavy decisions.
+
+**Spec alignment:**
+- **EconomySpec:** Use `RateLimiter` to cap interactions at ≤ 8 hits/s. Charge ≤ 10/s remains reserved for future powered devices.
+- **Networking:** Owner-only orbit updates; transforms replicate via VRCObjectSync. Serialize only on state change (e.g., health).
+- **Perf:** No allocations in Update; primitive colliders throughout; pooled FX if any.
+
+**Failure modes & mitigations:**
+- Tip-trigger missing rigidbody → **require Kinematic RB** on tip.
+- Core using trigger collider → must be **non-trigger** so entering tip (trigger) fires reliably.
+- Excessive orbit speed → cap angular speed per-spec; keep deterministic radii/phase arrays (no lists).
