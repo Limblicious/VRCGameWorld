@@ -138,3 +138,5 @@ Panel copy:
 - **Scav Drone:** hovering construct; most common foe; no Lumen drops.
 
 **Core theme:** You’re a displaced operator surviving inside a **galactic machine** that barely acknowledges you. The **tablet** makes you legible, **Lumen** fuels your choices, **Clearance** lets you press deeper, and the **Amnion** will catch you—**only if you’ve banked the charge.**
+## The Staff and the Cores  *(2025-09-23)*
+The staff is an imprint-tuned conductor. The entities you face are geometric shells orbiting a **core**—a red locus that anchors their pattern. Touching the staff’s tip to this locus collapses the form; the orbiting pieces scatter as inert debris. The rest is timing.

@@ -669,3 +669,39 @@ Ticks/timing: Request spam-guard 3 s; insert/eject debounce 0.5 s.
 Data (SOs): CoreTerminalSpec (allowRequestCue, spam thresholds).
 UI/ergonomics: Clear, polite copy; no grief vectors.
 Success criteria: Fast human handoff when desired; no coercion; no stuck states.
+## Combat (MVP) — Melee Staff & Geometric Enemies  *(2025-09-23)*
+
+### Weapon: Melee Staff (Tip-Touch Kill)
+**Core Rule:** An enemy is destroyed only when the **staff tip** overlaps the **enemy core** collider.
+
+**Implementation notes:**
+- Staff root holds `MeleeStaff`; child `Tip` holds `StaffTip` with a **primitive trigger collider** (Sphere/Capsule) and a **Kinematic Rigidbody**. No physics forces; just triggers.
+- `StaffTip.OnTriggerEnter()` checks for `EnemyCore` on the other collider; on match it calls `MeleeStaff.OnTipTouchCore(core)`.
+- Respect **EconomySpec rate limits** via `RateLimiter`: hits ≤ **8/s**; `minInterval` (e.g., 0.08s) guards rapid spam. No projectile/charge usage for MVP.
+
+**Networking & perf:**
+- No allocations in hot paths. Arrays only; no LINQ/lists.
+- Owner-only logic for local effects; transforms replicated via **VRCObjectSync**. `RequestSerialization()` only on state changes (e.g., health).
+
+**Colliders:**
+- Tip = trigger + kinematic RB.
+- Enemy core = **non-trigger primitive collider** (Sphere/Box). Orbiters = primitive colliders (non-trigger) to physically block the tip.
+- No MeshColliders.
+
+### Enemies: Geometric Core with Orbiters
+**Shape Model:** Root enemy has a **central core** (red cube/sphere) plus several **orbiting components** (cubes/spheres) rotating around the core.
+
+**Implementation notes:**
+- Root holds `EnemyNavigator` for global pathing (BFS across `DungeonGraphManager`); **seam cooldown** unchanged.
+- Root may hold `EnemyOrbitController` which updates orbiters’ positions **owner-only** (no GC); orbiters are plain children with primitive colliders.
+- Root holds `Health`; core child holds `EnemyCore` referencing the same `Health`. A lethal touch applies large damage to ensure a kill.
+
+**Navigation (unchanged):**
+- Primary model is **Global Portal Navgraph (BFS)** in `DungeonGraphManager`.
+- Graph must be built and **sealed** via `SealAndMarkReady()` before enabling enemies/spawners.
+
+### Acceptance (Combat slice)
+- Staff tip touching core kills enemy; touching orbiters does **not** kill (they block).
+- No per-frame GC; arrays only; owner-only orbit ticks; transforms via `VRCObjectSync`.
+- Rate limits respected (hits ≤ 8/s). Primitive colliders only.
+- Enemies traverse tiles via portals once graph is sealed.
