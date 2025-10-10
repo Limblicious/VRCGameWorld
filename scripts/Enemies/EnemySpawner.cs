@@ -1,7 +1,6 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon.Common.Interfaces;
 
 /// <summary>
 /// Owner-only enemy spawning system with round-robin spawn points.
@@ -13,7 +12,7 @@ using VRC.Udon.Common.Interfaces;
 /// - spawnPoints: Transform array of spawn locations
 /// - maxAlive: Maximum concurrent enemies (default 3)
 /// - respawnDelay: Delay between respawns (default 8s)
-[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+[UdonSharp.UdonBehaviourSyncMode(VRC.Udon.Common.Enums.BehaviourSyncMode.Manual)]
 public class EnemySpawner : UdonSharpBehaviour
 {
     [Header("Spawn Configuration")]

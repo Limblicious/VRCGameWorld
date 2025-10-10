@@ -198,3 +198,54 @@ var dmg = (Damageable)go.GetComponent("Damageable");
    - `VRCObjectSync`, `VRCObjectPool`, `VRCStation` → `using VRC.SDK3.Components;`
    - `VRCPlayerApi`, `Networking` → `using VRC.SDKBase;`
    - `UdonBehaviour` (references) → `using VRC.Udon;`
+
+## Imported Guardrails (auto-merged)
+
+### Guardrails Addendum v3 — Canonical Sync Attribute (DO NOT BREAK)
+
+**Canonical form (mandatory in all UdonSharp scripts):**
+```csharp
+[UdonSharp.UdonBehaviourSyncMode(VRC.Udon.Common.Enums.BehaviourSyncMode.Manual)]
+```
+
+**Never use:**
+- `VRC.Udon.Common.Interfaces.BehaviourSyncMode.*`
+- Unqualified `BehaviourSyncMode.*`
+- Bare `[UdonBehaviourSyncMode(...)]` without `UdonSharp.` prefix
+
+**Pre-commit validations (reject the change if any match):**
+
+**Regex ban (wrong namespace):**
+```
+VRC\.Udon\.Common\.Interfaces\.BehaviourSyncMode
+```
+
+**Regex ban (unqualified attribute):**
+```
+\[UdonBehaviourSyncMode\s*\(BehaviourSyncMode\.
+```
+
+**Regex allow-only (must match at least one):**
+```
+\[UdonSharp\.UdonBehaviourSyncMode\s*\(VRC\.Udon\.Common\.Enums\.BehaviourSyncMode\.Manual\)\]
+```
+
+**Rationale:** Unity compile errors CS0234 arise if `Interfaces` is used. UdonSharp requires a fully qualified enum under `VRC.Udon.Common.Enums` and the `UdonSharp.` attribute prefix to ensure consistent codegen.
+
+## Guardrail: Canonical File Locations (Scripts & Docs)
+
+**Rules:**
+- All UdonSharp C# source files MUST live under `/scripts/**`.  
+  **Never** create or modify code under `Assets/` (e.g., `Assets/scripts/UdonSharp/**`).
+- There must be exactly one guardrail doc at the repo root: `/CLAUDE.md`.
+
+**Pre-commit regex checks:**
+- BAN: any C# under Assets  
+  Pattern: `^Assets/.*\.cs$`
+- BAN: duplicate guardrail docs  
+  Pattern: `^scripts/claude\.md$`
+- ALLOW: canonical sync attribute only  
+  Pattern (must appear when attribute used):  
+  `\[UdonSharp\.UdonBehaviourSyncMode\s*\(VRC\.Udon\.Common\.Enums\.BehaviourSyncMode\.Manual\)\]`
+
+**Rationale:** Unity import is separate from source layout. We keep source in `/scripts` to avoid duplication and make code review predictable.

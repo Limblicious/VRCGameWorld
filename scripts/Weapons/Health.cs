@@ -1,10 +1,8 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon.Common.Interfaces;
-using VRC.Udon.Common;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+[UdonSharp.UdonBehaviourSyncMode(VRC.Udon.Common.Enums.BehaviourSyncMode.Manual)]
 public class Health : UdonSharpBehaviour
 {
     [UdonSynced] public float value = 100f;
