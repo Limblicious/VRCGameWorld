@@ -1,0 +1,150 @@
+using UdonSharp;
+using UnityEngine;
+
+/// Randomly links facing WaypointPortal pairs under portalsRoot, seals the graph,
+/// and optionally moves the whole dungeonRoot to a target Y (drop to play layer).
+/// No Lists/LINQ. No Update allocations. Trigger via Start() or SendCustomEvent("TriggerBuild").
+public class DungeonLayoutBuilder : UdonSharpBehaviour
+{
+    [Header("References")]
+    public DungeonGraphManager graph;
+    public Transform portalsRoot; // e.g., _TilesAndPortals (contains WaypointPortal children)
+    [Tooltip("Root that contains the dungeon pieces to move after build (e.g., _TilesAndPortals, _Enemies).")]
+    public Transform dungeonRoot;
+
+    [Header("Build Settings")]
+    [Tooltip("0..1: chance to link a detected seam. 1.0 = fully open; <1.0 = maze-like pruning.")]
+    public float linkProbability = 1.0f;
+    [Tooltip("Meters: max horizontal gap to consider two portals a facing seam.")]
+    public float pairDistanceEpsilon = 0.30f;
+    [Tooltip("Cosine of angle test for opposite facing (use >0.95).")]
+    public float facingDotThreshold = 0.95f;
+    [Tooltip("Delay to allow WaypointPortal.RegisterPortal() before building.")]
+    public float buildDelay = 0.08f; // seconds
+
+    [Header("Start/Trigger & Drop")]
+    [Tooltip("If true, build automatically on Start(). Otherwise call TriggerBuild() from elevator.")]
+    public bool buildOnStart = false; // you trigger from elevator
+    [Tooltip("If true, move dungeonRoot to targetDungeonY after sealing.")]
+    public bool dropAfterBuild = true;
+    [Tooltip("World-space Y to place dungeon after build (e.g., -10).")]
+    public float targetDungeonY = -10f;
+    [Tooltip("Extra delay before dropping dungeonRoot.")]
+    public float dropDelay = 0.00f;
+
+    // Internal working arrays (reused once during Build)
+    private WaypointPortal[] _portals;
+    private bool[] _used;
+    private bool _built = false;
+
+    void Start()
+    {
+        if (buildOnStart)
+        {
+            SendCustomEventDelayedSeconds(nameof(BuildAndSeal), buildDelay);
+        }
+    }
+
+    // Call this from elevator/terminal via SendCustomEvent("TriggerBuild")
+    public void TriggerBuild()
+    {
+        if (_built) return;
+        SendCustomEventDelayedSeconds(nameof(BuildAndSeal), buildDelay);
+    }
+
+    public void BuildAndSeal()
+    {
+        if (graph == null || portalsRoot == null) return;
+        if (_built) return;
+
+        // Gather portals once (allocations OK in one-shot build path)
+        _portals = (WaypointPortal[])portalsRoot.GetComponentsInChildren(typeof(WaypointPortal), true);
+        int n = (_portals != null) ? _portals.Length : 0;
+
+        if (n == 0)
+        {
+            graph.SealAndMarkReady();
+            _built = true;
+            if (dropAfterBuild) SendCustomEventDelayedSeconds(nameof(DropDungeon), dropDelay);
+            return;
+        }
+
+        if (_used == null || _used.Length != n) _used = new bool[n];
+        for (int k = 0; k < n; k++) _used[k] = false;
+
+        // Pair by proximity & opposite facing (arrays-only)
+        for (int i = 0; i < n; i++)
+        {
+            if (_used[i]) continue;
+            WaypointPortal a = _portals[i];
+            if (a == null) continue;
+
+            Transform ta = a.transform;
+            Vector3 pa = ta.position;
+            Vector3 fa = ta.forward;
+
+            int best = -1;
+
+            for (int j = i + 1; j < n; j++)
+            {
+                if (_used[j]) continue;
+                WaypointPortal b = _portals[j];
+                if (b == null) continue;
+
+                Transform tb = b.transform;
+                Vector3 pb = tb.position;
+                Vector3 fb = tb.forward;
+
+                // Horizontal distance (ignore Y)
+                float dx = pa.x - pb.x;
+                float dz = pa.z - pb.z;
+                float horizDist = Mathf.Sqrt(dx * dx + dz * dz);
+                if (horizDist > pairDistanceEpsilon) continue;
+
+                // Facing: should be roughly opposite
+                float dot = Vector3.Dot(fa, -fb);
+                if (dot < facingDotThreshold) continue;
+
+                best = j;
+                break; // accept first valid — layout is orthogonal/clean
+            }
+
+            if (best != -1)
+            {
+                bool doLink = (linkProbability >= 1.0f);
+                if (!doLink)
+                {
+                    float r = Random.value; // one-shot use is fine
+                    doLink = (r <= linkProbability);
+                }
+
+                if (doLink)
+                {
+                    int aId = a.portalIndex;
+                    int bId = _portals[best].portalIndex;
+                    if (aId >= 0 && bId >= 0)
+                    {
+                        graph.LinkNodes(aId, bId);
+                    }
+                }
+
+                _used[i] = true;
+                _used[best] = true;
+            }
+        }
+
+        // Seal AFTER linking so BFS is ready
+        graph.SealAndMarkReady();
+        _built = true;
+        if (dropAfterBuild) SendCustomEventDelayedSeconds(nameof(DropDungeon), dropDelay);
+    }
+
+    public void DropDungeon()
+    {
+        if (!dropAfterBuild) return;
+        if (dungeonRoot == null) return;
+        Vector3 p = dungeonRoot.position;
+        p.y = targetDungeonY;
+        dungeonRoot.position = p;
+    }
+}

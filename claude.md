@@ -271,3 +271,19 @@ using VRC.Udon.Common.Enums;
 - Attribute present but missing required using: file contains `UdonBehaviourSyncMode` but not `using VRC\.Udon\.Common\.Enums;`
 
 **Rationale:** This compiles reliably across SDK minor updates and avoids brittle namespace changes.
+
+## Guardrail — Portal Node Access (No Hardcoding)
+
+**Rule:** Never hardcode `WaypointPortal.nodeId`. Always use the actual portal->node identifier defined in this repo **or** the graph's helper method.
+
+**Allowed forms (one of):**
+- `portal.portalIndex` (the actual PUBLIC field in this repo)
+- `portal.GetIndex()` (the actual PUBLIC method in this repo)
+- `graph.GetNodeIdByPortal(portal)` (if such a helper exists)
+
+**Pre-commit checks (reject on match):**
+- Disallowed literal: `\.nodeId\b` in any `.cs` under `/scripts`.
+- If `UdonBehaviourSyncMode` attribute present, ensure `using VRC.Udon.Common.Enums;` exists (compile hygiene).
+- No Lists/LINQ/foreach/lambdas in hot paths; no ` new ` inside Update-like methods.
+
+**Rationale:** Field names differ per revision; this guardrail forces code to use the canonical identifier or the graph API and avoids CS1061 breakage.
