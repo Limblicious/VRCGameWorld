@@ -1,6 +1,7 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.Udon.Common.Enums;
 
 /// <summary>
 /// Shows tablet prompt at hub spawn until player Interacts once.
@@ -12,7 +13,7 @@ using VRC.SDKBase;
 /// - prompt: BillboardText component for UI prompt display
 /// - audio: AudioRouter for interaction sound effects
 /// - fx: FXRouter for interaction visual effects
-[UdonSharp.UdonBehaviourSyncMode(VRC.Udon.Common.Enums.BehaviourSyncMode.Manual)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class TabletController : UdonSharpBehaviour
 {
     [Header("Components")]

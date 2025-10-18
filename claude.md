@@ -249,3 +249,25 @@ VRC\.Udon\.Common\.Interfaces\.BehaviourSyncMode
   `\[UdonSharp\.UdonBehaviourSyncMode\s*\(VRC\.Udon\.Common\.Enums\.BehaviourSyncMode\.Manual\)\]`
 
 **Rationale:** Unity import is separate from source layout. We keep source in `/scripts` to avoid duplication and make code review predictable.
+
+## Guardrails v4 — Canonical Udon Sync Attribute
+
+**Required form in all U# scripts:**
+```csharp
+using UdonSharp;
+using VRC.Udon.Common.Enums;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+```
+
+**Never use:**
+- `VRC.Udon.Common.Interfaces.BehaviourSyncMode.*`
+- Fully qualifying the enum inside the attribute (e.g., `VRC.Udon.Common.Enums.BehaviourSyncMode.*`)
+- `UdonSharp.UdonBehaviourSyncMode(...)` (no `UdonSharp.` prefix on the attribute)
+
+**Pre-commit regex checks (reject on match):**
+- Wrong namespace: `VRC\.Udon\.Common\.Interfaces\.BehaviourSyncMode`
+- Over-qualified enum in attribute: `UdonBehaviourSyncMode\s*\(\s*VRC\.Udon\.Common\.Enums\.BehaviourSyncMode`
+- Attribute present but missing required using: file contains `UdonBehaviourSyncMode` but not `using VRC\.Udon\.Common\.Enums;`
+
+**Rationale:** This compiles reliably across SDK minor updates and avoids brittle namespace changes.

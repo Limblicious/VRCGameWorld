@@ -1,7 +1,8 @@
 using UdonSharp;
 using UnityEngine;
+using VRC.Udon.Common.Enums;
 
-[UdonSharp.UdonBehaviourSyncMode(VRC.Udon.Common.Enums.BehaviourSyncMode.Manual)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class Damageable : UdonSharpBehaviour
 {
     public Health health;

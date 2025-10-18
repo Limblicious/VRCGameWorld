@@ -1,8 +1,9 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.Udon.Common.Enums;
 
-[UdonSharp.UdonBehaviourSyncMode(VRC.Udon.Common.Enums.BehaviourSyncMode.Manual)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class EnemyAuthority : UdonSharpBehaviour
 {
     [Header("Registry")]
