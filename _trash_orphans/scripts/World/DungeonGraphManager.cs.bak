@@ -22,39 +22,23 @@ public class DungeonGraphManager : UdonSharpBehaviour
 
     private int Idx(int a, int b) { return a * maxNodes + b; }
 
-    private void EnsureAllocated()
-    {
-        // Ensure arrays are allocated to current capacity; no multi-dim arrays.
-        if (maxNodes < 1) maxNodes = 64; // safe default
-
-        // Adjacency should be size = maxNodes * maxNodes
-        if (adj == null || adj.Length != maxNodes * maxNodes)
-            adj = new bool[maxNodes * maxNodes];
-
-        // Node tracking arrays
-        if (nodes == null || nodes.Length != maxNodes)
-            nodes = new WaypointPortal[maxNodes];
-        if (used == null || used.Length != maxNodes)
-            used = new bool[maxNodes];
-
-        // BFS buffers
-        if (visited == null || visited.Length != maxNodes)
-            visited = new bool[maxNodes];
-        if (queue == null || queue.Length != maxNodes)
-            queue = new int[maxNodes];
-        if (prev == null || prev.Length != maxNodes)
-            prev = new int[maxNodes];
-    }
-
     void Start()
     {
-        EnsureAllocated();
+        if (nodes == null || nodes.Length != maxNodes)
+        {
+            nodes = new WaypointPortal[maxNodes];
+            used = new bool[maxNodes];
+            adj = new bool[maxNodes * maxNodes];
+
+            queue = new int[maxNodes];
+            prev = new int[maxNodes];
+            visited = new bool[maxNodes];
+        }
         graphReady = false;
     }
 
     public int RegisterPortal(WaypointPortal p)
     {
-        EnsureAllocated();
         for (int i = 0; i < maxNodes; i++)
         {
             if (!used[i])
@@ -69,7 +53,6 @@ public class DungeonGraphManager : UdonSharpBehaviour
 
     public void LinkNodes(int a, int b)
     {
-        EnsureAllocated();
         if (a < 0 || b < 0 || a >= maxNodes || b >= maxNodes) return;
         if (!used[a] || !used[b]) return;
         adj[Idx(a, b)] = true;
@@ -84,7 +67,6 @@ public class DungeonGraphManager : UdonSharpBehaviour
     // Fills pathBuf with src->dst indices, returns hop count, 0 if none.
     public int GetPath(int src, int dst, int[] pathBuf)
     {
-        EnsureAllocated();
         if (!graphReady || src < 0 || dst < 0 || src >= maxNodes || dst >= maxNodes) return 0;
 
         for (int i = 0; i < maxNodes; i++)

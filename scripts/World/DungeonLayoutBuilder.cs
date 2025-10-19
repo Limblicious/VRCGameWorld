@@ -32,6 +32,9 @@ public class DungeonLayoutBuilder : UdonSharpBehaviour
     [Tooltip("Extra delay before dropping dungeonRoot.")]
     public float dropDelay = 0.00f;
 
+    [Header("Optional Preset (skip auto-scan if filled)")]
+    public WaypointPortal[] presetPortals;
+
     // Internal working arrays (reused once during Build)
     private WaypointPortal[] _portals;
     private bool[] _used;
@@ -58,7 +61,14 @@ public class DungeonLayoutBuilder : UdonSharpBehaviour
         if (_built) return;
 
         // Gather portals once (allocations OK in one-shot build path)
-        _portals = (WaypointPortal[])portalsRoot.GetComponentsInChildren(typeof(WaypointPortal), true);
+        if (presetPortals != null && presetPortals.Length > 0)
+        {
+            _portals = presetPortals;
+        }
+        else
+        {
+            _portals = portalsRoot.GetComponentsInChildren<WaypointPortal>(true);
+        }
         int n = (_portals != null) ? _portals.Length : 0;
 
         if (n == 0)

@@ -120,8 +120,8 @@ public class DungeonLayoutBuilder : UdonSharpBehaviour
 
                 if (doLink)
                 {
-                    int aId = a.nodeId;
-                    int bId = _portals[best].nodeId;
+                    int aId = a.portalIndex;
+                    int bId = _portals[best].portalIndex;
                     if (aId >= 0 && bId >= 0)
                     {
                         graph.LinkNodes(aId, bId);

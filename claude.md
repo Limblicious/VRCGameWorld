@@ -287,3 +287,13 @@ using VRC.Udon.Common.Enums;
 - No Lists/LINQ/foreach/lambdas in hot paths; no ` new ` inside Update-like methods.
 
 **Rationale:** Field names differ per revision; this guardrail forces code to use the canonical identifier or the graph API and avoids CS1061 breakage.
+
+## Guardrail — No `typeof(UserType)` in UdonSharp
+
+**Rule:** Never use `typeof(<UdonSharpBehaviourSubclass>)` in U# scripts.
+Use the generic API (e.g., `GetComponentsInChildren<MyType>(true)`) or expose a serialized array on the component.
+
+**Pre-commit checks (reject on match):**
+- `typeof\(\s*[A-Z][A-Za-z0-9_]*\s*\)` in any `/scripts/**/*.cs` that inherits `UdonSharpBehaviour`.
+
+**Rationale:** UdonSharp does not support `typeof` on user-defined types; generics and serialized references are supported and allocation-free in hot paths.
